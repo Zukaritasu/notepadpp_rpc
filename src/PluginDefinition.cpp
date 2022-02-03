@@ -21,6 +21,7 @@
 #include <discord_game_sdk.h>
 #include <CommCtrl.h>
 #include <time.h>
+#include <tchar.h>
 
 #pragma warning(disable: 4100)
 
@@ -28,36 +29,47 @@ FuncItem funcItem[nbFunc];
 
 NppData nppData;
 
+#define TITLE_MBOX_DRPC TEXT("Discord RPC")
+
 static IDiscordCore* core       = NULL;
 static HANDLE thread            = NULL;
 static volatile bool loop_while = true;
+
+
+void ShowError(DWORD code = 0);
+
+bool DiscordError(EDiscordResult result);
+
 
 static void UpdatePresence(const char* file)
 {
 	if (core)
 	{
-		static DiscordActivity activity{};
+		static DiscordActivity rpc{};
 		static bool isInitialize = false;
 
 		if (!isInitialize) {
-			activity.type = EDiscordActivityType::DiscordActivityType_Playing;
-			activity.timestamps.start = _time64(0);
+			rpc.type = EDiscordActivityType::DiscordActivityType_Playing;
+			rpc.timestamps.start = _time64(0);
 
-			strcpy(activity.assets.large_image, "favicon");
-			strcpy(activity.assets.large_text, "Notepad++");
+			strcpy(rpc.assets.large_image, "favicon");
+			strcpy(rpc.assets.large_text, "Notepad++");
 
 			isInitialize = true;
 		}
 
 		if (file) {
-			strcpy(activity.details, "Editing: ");
-			strcat(activity.details, file);
+			strcpy(rpc.details, "Editing: ");
+			strcat(rpc.details, file);
 		} else {
-			memset(activity.details, 0, sizeof(activity.details));
+			memset(rpc.details, 0, sizeof(rpc.details));
 		}
 
 		IDiscordActivityManager* manager = core->get_activity_manager(core);
-		manager->update_activity(manager, &activity, NULL, NULL);
+		manager->update_activity(manager, &rpc, NULL, 
+			[](void*, EDiscordResult result) {
+			DiscordError(result);
+		});
 	}
 }
 
@@ -65,7 +77,7 @@ static DWORD WINAPI RunCallBacks(LPVOID lpParam)
 {
 	UpdatePresence(NULL);
 	while (loop_while) {
-		if (core->run_callbacks(core) != DiscordResult_Ok)
+		if (DiscordError(core->run_callbacks(core)))
 			break;
 		Sleep(1000 / 60);
 	}
@@ -80,9 +92,12 @@ static void InitPresence()
 	params.client_id = 938157386068279366;
 	params.flags = DiscordCreateFlags_Default;
 
-	if (DiscordResult_Ok == 
-		DiscordCreate(DISCORD_VERSION, &params, &core)) {
+	if (!DiscordError(DiscordCreate(DISCORD_VERSION, &params, &core))) {
 		thread = CreateThread(NULL, 0, RunCallBacks, NULL, 0, NULL);
+		/* Se muestra el error ocurrido en CreateThread */
+		if (thread == NULL) {
+			ShowError();
+		}
 	}
 }
 
@@ -104,7 +119,7 @@ static void ClosePresence()
 
 static char* GetFileName(char* out, const char* in)
 {
-	int length = strlen(in);
+	int length = lstrlenA(in);
 	int pos = length - 1 - NPPMNC;
 	
 	bool delim = false;
@@ -128,17 +143,21 @@ static char* GetFileName(char* out, const char* in)
 	return out;
 }
 
-static void ResolveTitleWindow(const wchar_t* title_win)
+static void ResolveTitleWindow(const TCHAR* title_win)
 {
-	int length = lstrlen(title_win);
+	int length = (int)lstrlen(title_win);
 	if (length > NPPMNC) {
 		char title[1024]{};
+#ifdef UNICODE
 		int mbyte_len = WideCharToMultiByte(CP_UTF8, 0, title_win, length,
 						title, sizeof(title), NULL, FALSE);
 		if (mbyte_len > 0) {
 			UpdatePresence(GetFileName(title, title));
 			return;
 		}
+#else
+		UpdatePresence(GetFileName(title, title_win));
+#endif /* UNICODE */
 	}
 	
 	UpdatePresence(NULL);
@@ -149,7 +168,7 @@ LRESULT CALLBACK SubClassProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 {
 	switch (uMsg) {
 		case WM_SETTEXT:
-			ResolveTitleWindow((PCWCH)lParam);
+			ResolveTitleWindow((TCHAR*)lParam);
 			break;
 		case WM_CLOSE:
 			ClosePresence();
@@ -212,9 +231,36 @@ void About()
 		TEXT("Author: Zukaritasu\n\n" )
 		TEXT("Copyright: (c) 2022\n\n")
 		TEXT("License: GPL v3\n\n"    )
-		TEXT("Version: 1.0"           ), 
+		TEXT("Version: 1.1"           ),
 
-	TEXT("Discord RPC"), MB_ICONINFORMATION);
+		TITLE_MBOX_DRPC, MB_ICONINFORMATION);
 }
 
+void ShowError(DWORD code)
+{
+	DWORD error = code == 0 ? GetLastError() : code;
+	if (error != 0) {
+		TCHAR* msg  = NULL;
+		DWORD count = ::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
+									  FORMAT_MESSAGE_ALLOCATE_BUFFER,
+									  NULL, error, 0, (TCHAR*)&msg, 0, NULL);
+		if (msg != NULL && count > 0) {
+			::MessageBox(nppData._nppHandle, msg, TITLE_MBOX_DRPC, MB_ICONERROR);
+			LocalFree((HLOCAL)msg);
+		}
+	}
+}
 
+#define DISCORD_ERROR_FORMAT \
+		TEXT("An error has occurred in Discord. \n\nError code: 0x000000%X")
+
+bool DiscordError(EDiscordResult result)
+{
+	if (result != EDiscordResult::DiscordResult_Ok) {
+		TCHAR error[260]{};
+		_stprintf(error, DISCORD_ERROR_FORMAT, (int)result);
+		::MessageBox(nppData._nppHandle, error, TITLE_MBOX_DRPC, MB_ICONERROR);
+		return true;
+	}
+	return false;
+}
