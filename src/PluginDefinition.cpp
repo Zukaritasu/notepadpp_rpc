@@ -231,7 +231,7 @@ void About()
 		TEXT("Author: Zukaritasu\n\n" )
 		TEXT("Copyright: (c) 2022\n\n")
 		TEXT("License: GPL v3\n\n"    )
-		TEXT("Version: 1.1"           ),
+		TEXT("Version: 1.1.72"        ),
 
 		TITLE_MBOX_DRPC, MB_ICONINFORMATION);
 }

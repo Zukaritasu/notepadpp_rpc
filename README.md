@@ -1,9 +1,9 @@
 # Discord Rich Presence for Notepad++
 
-Muestra en discord el archivo que se esta editando actualmente en Nopetad++. Cada vez que se abre un archivo, se cierra o se cambia a otro archivo se actualiza la presencia. En el caso que se cierre la ventana de Notepad++ o se deshabilite el plugin la presencia desaparecera
+Shows in discord the file that is currently being edited in Nopetad++. Every time a file is opened, closed or changed to another file the presence is updated. In the event that the Notepad++ window is closed or the plugin is uninstalled, the presence will disappear 
 
 ## Instalacion
 
-Para agregar el plugin a Notepad++ debe descargar el comprimido dependiendo de la arquitectura del sistema y descomprimirlo, luego copie la carpeta a **C:\Program Files\Notepad++\plugins**, si tenia Notepad++ abierto entonces debe cerrarlo y abrirlo nuevamente y comprobar si se muestra en su perfil
+To add the plugin to Notepad++ you must download the compressed file and in the path **C:\Program Files\Notepad++\plugins** you must create a folder with the same name as the compressed file **C:\Program Files\Notepad++\plugins\DiscordRPC** and paste the content into that folder. If you had Notepad++ open then you should close it and open it again and check if it shows in your profile
 
-Por los momentos el plugin no aparecera en la lista de plugins oficial de Notepad++
+At the moment the plugin will not appear in the official Notepad++ plugin list 
