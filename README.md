@@ -13,5 +13,7 @@ At the moment the plugin will not appear in the official Notepad++ plugin list
 ## Discord SDK Information
 
 https://discord.com/developers/docs/game-sdk/sdk-starter-guide
+
 https://discord.com/developers/docs/game-sdk/activities
+
 https://discord.com/developers/docs/rich-presence/how-to
