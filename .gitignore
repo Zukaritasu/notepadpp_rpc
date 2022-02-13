@@ -1,3 +1,5 @@
+build.bat
+comprimidos
 .settings
 .cproject
 .project
@@ -7,6 +9,7 @@ vstudio/*.suo
 vstudio/bin/
 vstudio/bin64/
 vstudio/arm64/
+vstudio/src/PluginResources.aps
 vstudio/vs.proj/Debug
 vstudio/vs.proj/Release
 vstudio/vs.proj/x64

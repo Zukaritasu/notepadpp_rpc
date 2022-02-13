@@ -22,7 +22,7 @@
 
 const TCHAR NPP_PLUGIN_NAME[] = TEXT("Discord Rich Presence");
 
-const int nbFunc = 2;
+const int nbFunc = 3;
 
 void pluginInit(HANDLE hModule);
 

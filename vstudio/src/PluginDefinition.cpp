@@ -77,13 +77,13 @@ static FileData gl_fdata{};
 
 /*==============================================================*/
 
-static void  ShowErrorMessage(LPCTSTR msg, HWND hWnd = NULL);
-static void  ShowError       (DWORD code = 0);
-static bool  DiscordError    (EDiscordResult result);
-static void  SetDefaultConfig(Config& config);
-static void  SaveConfig      (const Config& config);
-static void  LoadConfig      (Config& config);
-static char* GetExtensionFile(char* out, const char* flname, bool upper);
+static void ClosePresence   ();
+static void ShowErrorMessage(LPCTSTR msg, HWND hWnd = NULL);
+static void ShowError       (DWORD code = 0);
+static bool DiscordError    (EDiscordResult result);
+static void SetDefaultConfig(Config& config);
+static void SaveConfig      (const Config& config);
+static void LoadConfig      (Config& config);
 
 /*==============================================================*/
 
@@ -155,7 +155,7 @@ static void UpdatePresence(FileData fl_data = FileData())
 	if (fl_data.fl_extn[0] != '\0')
 	{
 		strupr(fl_data.fl_extn);
-		sprintf_s(rpc.assets.large_text, "Editing in %s file", fl_data.fl_extn);
+		sprintf_s(rpc.assets.large_text, "Editing a %s file", fl_data.fl_extn);
 	}
 	else
 	{
@@ -177,8 +177,10 @@ static DWORD WINAPI RunCallBacks(LPVOID)
 	SetDefaultRPC(rpc);
 	UpdatePresence(gl_fdata);
 	while (loop_while) {
-		if (DiscordError(core->run_callbacks(core)))
+		if (DiscordError(core->run_callbacks(core))) {
+			ClosePresence();
 			break;
+		}
 		Sleep(1000 / 60);
 	}
 	loop_while = true;
@@ -194,7 +196,7 @@ static void ClosePresence()
 			Sleep(100);
 		}
 		core->destroy(core);
-		core = NULL;
+		core   = NULL;
 		thread = NULL;
 	}
 }
@@ -210,8 +212,7 @@ static void InitPresence(const Config& _config)
 		if (!DiscordError(DiscordCreate(DISCORD_VERSION, &params, &core))) {
 			thread = CreateThread(NULL, 0, RunCallBacks, NULL, 0, NULL);
 			ShowError();
-			if (thread == NULL)
-			{
+			if (thread == NULL) {
 				ClosePresence();
 			}
 		}
@@ -316,7 +317,8 @@ void commandMenuInit()
 		ID_SUB_CLSPROC, 0);
 
 	setCommand(0, TEXT("Options"), OptionsPlugin);
-	setCommand(1, TEXT("About"),   About);
+	setCommand(1, NULL, NULL);
+	setCommand(2, TEXT("About"),   About);
 }
 
 void commandMenuCleanUp()
@@ -358,7 +360,7 @@ bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
 	_T("Author: Zukaritasu\n\n" ) \
 	_T("Copyright: (c) 2022\n\n") \
 	_T("License: GPL v3\n\n"    ) \
-	_T("Version: 1.2.95.1"      )
+	_T("Version: 1.2.98.1"      )
 
 
 void About()
@@ -393,7 +395,7 @@ static void ShowError(DWORD code)
 }
 
 #define DISCORD_ERROR_FORMAT \
-	_T("An error has occurred in Discord.\n\nError code: 0x000000%X")
+	_T("An error has occurred in Discord. Error code: 0x000000%X")
 
 #ifdef UNICODE
 #	define BUF_E_SIZE (sizeof(DISCORD_ERROR_FORMAT) / 2)
