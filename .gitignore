@@ -1,8 +1,9 @@
-build.bat
-comprimidos
+msbuild.bat
+v140
 .settings
 .cproject
 .project
+images/resources
 vstudio/*.sdf
 vstudio/*.sln
 vstudio/*.suo

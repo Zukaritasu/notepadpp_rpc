@@ -1,6 +1,6 @@
 # Discord Rich Presence for Notepad++
 
-Shows in Discord the file that is currently being edited in Notepad++. Every time you open, close, save changes, or switch from one file to another, the presence is updated. In case the Notepad++ window is closed, the plugin is uninstalled or disabled from the options, the presence will disappear 
+Shows in Discord the file that is currently being edited in [Notepad++](https://github.com/notepad-plus-plus/notepad-plus-plus). Every time you open, close, save changes, or switch from one file to another, the presence is updated. In case the Notepad++ window is closed, the plugin is uninstalled or disabled from the options, the presence will disappear 
 
 ## Installation
 
@@ -17,8 +17,6 @@ And paste the content into that folder. If you had Notepad++ open then you shoul
 
 ## Discord SDK Information
 
-https://discord.com/developers/docs/game-sdk/sdk-starter-guide
-
-https://discord.com/developers/docs/game-sdk/activities
-
-https://discord.com/developers/docs/rich-presence/how-to
+* [SDK Starter Guide](https://discord.com/developers/docs/game-sdk/sdk-starter-guide)
+* [Activities](https://discord.com/developers/docs/game-sdk/activities)
+* [How To](https://discord.com/developers/docs/rich-presence/how-to)

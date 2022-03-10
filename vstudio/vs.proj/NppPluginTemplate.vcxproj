@@ -34,10 +34,16 @@
     <ClInclude Include="..\src\Sci_Position.h" />
     <ClInclude Include="..\src\PluginResources.h" />
     <ClInclude Include="..\src\menuCmdID.h" />
+	<ClInclude Include="..\src\PluginConfig.h" />
+	<ClInclude Include="..\src\PluginDlgOption.h" />
+	<ClInclude Include="..\src\PluginError.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NppPluginDemo.cpp" />
     <ClCompile Include="..\src\PluginDefinition.cpp" />
+	<ClCompile Include="..\src\PluginConfig.cpp" />
+	<ClCompile Include="..\src\PluginDlgOption.cpp" />
+	<ClCompile Include="..\src\PluginError.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\PluginResources.rc" />

@@ -1,0 +1,11 @@
+
+[Version 1.3]
+	In this new version 1.3 we have as a novelty that the presence
+	now shows the icon of the programming language of the file that
+	is currently being edited in Notepad++. This new option can be
+	enabled or disabled from the plugin options dialog, by default
+	this option is enabled.
+
+	Some errors and security problems in the source code were also
+	corrected, on the other hand if you notice that something is
+	wrong with the plugin, notify me let know so I can fix it!
