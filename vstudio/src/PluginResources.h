@@ -30,10 +30,10 @@
 #define PLUGIN_VERSION_LONG             "1.3.155.1"
 
 #define PLUGIN_ABOUT \
-	TEXT("Version " PLUGIN_VERSION_LONG "\nCopyright (c) 2022 Zukaritasu\nLicence GPLv3\n\nShows in discord the file that is currently being edited in Nopetad++.")
+	TEXT("Version " PLUGIN_VERSION_LONG "\nCopyright (c) 2022 Zukaritasu\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Nopetad++.")
 
 #define CREATE_DIRECTORY_ERROR \
-	TEXT("Could not create directory [%s] because a file with the same name exists ")
+	TEXT("Could not create directory [%s] because a file with the same name exists")
 
 #define IDS_ENABLERPC                   101
 #define IDS_CLIENTID                    102

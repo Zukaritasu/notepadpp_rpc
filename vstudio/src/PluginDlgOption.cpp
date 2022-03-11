@@ -23,7 +23,6 @@
 #include <cstdio>
 #endif // _DEBUG
 
-
 #pragma warning(disable: 4996)
 
 extern NppData nppData;
@@ -35,7 +34,7 @@ static bool CreateTooltipInfo(HWND hDlg)
 {
 	HWND toolTip = CreateWindow(TOOLTIPS_CLASS,
 								nullptr,
-								TTS_ALWAYSTIP | TTS_NOPREFIX | WS_POPUP,
+								TTS_ALWAYSTIP | TTS_NOPREFIX | TTS_USEVISUALSTYLE | WS_POPUP,
 								0, 0, 0, 0,
 								hDlg,
 								(HMENU)0,
@@ -43,8 +42,8 @@ static bool CreateTooltipInfo(HWND hDlg)
 								nullptr);
 	if (toolTip == nullptr)
 		return false;
-
-	SendMessage(toolTip, TTM_SETTITLE, TTI_NONE, reinterpret_cast<LPARAM>(TEXT("Options")));
+	
+	SendMessage(toolTip, TTM_SETTITLE, TTI_NONE, (LPARAM)TEXT("Description"));
 
 	TOOLINFO toolInfo{};
 	toolInfo.cbSize = sizeof(toolInfo);

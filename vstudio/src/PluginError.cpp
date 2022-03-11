@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "PluginError.h"
+#include "PluginDefinition.h"
 
 #pragma warning(disable: 4996)
 
@@ -25,12 +26,22 @@ extern NppData nppData;
 
 #include <tchar.h>
 
+#ifndef _DEBUG
+#include <string>
+
+#ifdef UNICODE
+	typedef std::wstring String;
+#else
+	typedef std::string String;
+#endif // UNICODE
+#endif // _DEBUG
+
 void ShowErrorMessage(const TCHAR* message, HWND hWnd)
 {
 #ifdef _DEBUG
 	_tprintf(TEXT(" > %s\n"), message);
 #else
-	MessageBox(hWnd ? hWnd : nppData._nppHandle, msg,
+	MessageBox(hWnd ? hWnd : nppData._nppHandle, message,
 		TITLE_MBOX_DRPC, MB_ICONERROR | MB_OK);
 #endif // _DEBUG
 }
@@ -39,7 +50,7 @@ void ShowErrorMessage(const TCHAR* message, HWND hWnd)
 	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | \
 				  FORMAT_MESSAGE_ALLOCATE_BUFFER, \
 				  nullptr, code, 0, reinterpret_cast<TCHAR*>(pmsg), 0, nullptr)
-
+				  
 void ShowLastError()
 {
 	unsigned long error_code = GetLastError();
@@ -48,7 +59,15 @@ void ShowLastError()
 		TCHAR* message = nullptr;
 		if (GetErrorMessage(&message, error_code) > 0 && message)
 		{
+#ifdef _DEBUG
 			ShowErrorMessage(message);
+#else
+			String msg_format;
+			msg_format += TEXT("An error has occurred in the plugin. Reason:\n\n");
+			msg_format += message;
+			ShowErrorMessage(msg_format.c_str());
+#endif // _DEBUG
+			
 			LocalFree(message);
 		}
 	}

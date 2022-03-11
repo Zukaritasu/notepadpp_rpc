@@ -86,7 +86,7 @@ static __int64 GetFileSize(TCHAR* filename)
 
 static HWND GetScintillaHandle()
 {
-
+	return nullptr;
 }
 
 static const char* GetLanguageLargeImage()
@@ -97,16 +97,33 @@ static const char* GetLanguageLargeImage()
 	{
 	case L_JAVA:    return "java";
 	case L_JAVASCRIPT: // Javascript and typescript
-	case L_JS:      return "javascript";
-	case L_C:       return "c";
-	case L_CPP:     return "cpp";
-	case L_CS:      return "csharp";
-	case L_CSS:     return "css";
-	case L_HASKELL: return "haskell";
-	case L_HTML:    return "html";
-	case L_PHP:     return "php";
-	case L_PYTHON:  return "python";
-	case L_RUBY:    return "ruby";
+	case L_JS:            return "javascript";
+	case L_C:             return "c";
+	case L_CPP:           return "cpp";
+	case L_CS:            return "csharp";
+	case L_CSS:           return "css";
+	case L_HASKELL:       return "haskell";
+	case L_HTML:          return "html";
+	case L_PHP:           return "php";
+	case L_PYTHON:        return "python";
+	case L_RUBY:          return "ruby";
+	case L_XML:           return "xml";
+	case L_VB:            return "visualbasic";
+	case L_BASH:
+	case L_BATCH:         return "cmd";
+	case L_LUA:           return "lua";
+	case L_CMAKE:         return "cmake";
+	case L_PERL:          return "perl";
+	case L_JSON:          return "json";
+	case L_YAML:          return "yaml";
+	case L_OBJC:          return "objectivec";
+	case L_RUST:          return "rust";
+	case L_LISP:          return "lisp";
+	case L_R:             return "r";
+	case L_SWIFT:         return "swift";
+	case L_FORTRAN:       return "fortran";
+	case L_ERLANG:        return "erlang";
+	case L_COFFEESCRIPT:  return "coffeescript";
 	default:
 		break;
 	}
@@ -115,6 +132,7 @@ static const char* GetLanguageLargeImage()
 
 static void UpdatePresence(FileData data = FileData())
 {
+	// Crear strings
 	*rpc.details = *rpc.state = *rpc.assets.small_image = *rpc.assets.small_text = '\0';
 
 	if (*data.name) 
@@ -159,7 +177,7 @@ static void UpdatePresence(FileData data = FileData())
 #ifdef _DEBUG
 		[](void*, EDiscordResult result) {
 			if (result != DiscordResult_Ok)
-			printf("[RPC] Update presence | %d", static_cast<int>(result));
+			printf("[RPC] Update presence | %d\n", static_cast<int>(result));
 		}
 #else
 		nullptr
@@ -188,7 +206,7 @@ reconnect:
 		result == DiscordResult_NotRunning)
 	{
 #ifdef _DEBUG
-		printf(" > Reconnecting...");
+		printf(" > Reconnecting...\n");
 		reconnecting = true;
 #endif // _DEBUG
 
@@ -200,13 +218,13 @@ reconnect:
 	core->set_log_hook(core, DiscordLogLevel_Debug, nullptr,
 		[](void*, EDiscordLogLevel level, const char* message)
 	{
-		printf("[LOG] Level: %d | Message: %s", static_cast<int>(level), message);
+		printf("[LOG] Level: %d | Message: %s\n", static_cast<int>(level), message);
 	});
 #endif // _DEBUG
 
 #ifdef _DEBUG
 	if (reconnecting)
-		printf(" > Successful reconnection!");
+		printf(" > Successful reconnection!\n");
 #endif // _DEBUG
 
 	loop_while = true;
@@ -215,13 +233,7 @@ reconnect:
 
 	while (loop_while) 
 	{
-#ifdef _DEBUG
-		auto result = core->run_callbacks(core);
-		if (result != DiscordResult_Ok)
-			printf("[RUN] > Error code: %d", static_cast<int>(result));
-#else
 		core->run_callbacks(core);
-#endif // _DEBUG
 		Sleep(1000 / 60);
 	}
 

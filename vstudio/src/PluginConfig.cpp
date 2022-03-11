@@ -116,5 +116,6 @@ void LoadPluginConfig(PluginConfig& config)
 	if (set_default)
 	{
 		LoadDefaultConfig(config);
+		SavePluginConfig(config);
 	}
 }
