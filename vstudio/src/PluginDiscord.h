@@ -15,8 +15,12 @@
 
 #pragma once
 
-#include "PluginConfig.h"
-
 #include <Windows.h>
 
-void ShowPluginDlgOption();
+void DiscordInitPresence();
+void DiscordUpdatePresence(HWND hWnd, LPARAM lParam = 0);
+void DiscordClosePresence();
+
+
+
+

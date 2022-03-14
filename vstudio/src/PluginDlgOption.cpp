@@ -17,6 +17,7 @@
 #include "PluginDefinition.h"
 #include "PluginResources.h"
 #include "PluginError.h"
+#include "PluginDiscord.h"
 
 #include <CommCtrl.h>
 #ifdef _DEBUG
@@ -27,6 +28,7 @@
 
 extern NppData nppData;
 extern HINSTANCE hPlugin;
+extern PluginConfig config;
 
 #define PROP_OPTION_DATA TEXT("OPTION_DATA")
 
@@ -117,31 +119,30 @@ static bool ProcessCommand(HWND hDlg)
 			== BST_CHECKED;
 	};
 
-	DlgOptionData* data = reinterpret_cast<DlgOptionData*>(GetProp(hDlg, PROP_OPTION_DATA));
-	PluginConfig copy = *(data->_config);
+	PluginConfig copy = config;
 
 	copy._client_id = client_id;
 	copy._enable    = IsButtonChecked(IDC_ENABLE);
 	copy._show_sz   = IsButtonChecked(IDC_SHOW_FILESZ);
 	copy._show_lang = IsButtonChecked(IDC_SHOW_LANGICON);
 
-	if (memcmp(&copy, &data->_config, sizeof(PluginConfig)) != 0)
+	if (memcmp(&copy, &config, sizeof(PluginConfig)) != 0)
 	{
 #ifdef _DEBUG
 		printf("\n > New configuration:"
 			   "\n-> client id: %lld\n-> enable: %d\n-> show file size: %d\n-> show lang icon: %d\n", 
 			   copy._client_id, copy._enable, copy._show_sz, copy._show_lang);
 #endif // _DEBUG
-		memcpy(data->_config, &copy, sizeof(PluginConfig));
+		memcpy(&config, &copy, sizeof(PluginConfig));
 		if (!copy._enable)
-			data->_close();
+			DiscordClosePresence();
 		else
 		{
 			if (copy._client_id != client_id)
-				data->_close();
+				DiscordClosePresence();
 
-			data->_update(nppData._nppHandle, 0);
-			data->_init(copy);
+			DiscordUpdatePresence(nppData._nppHandle);
+			DiscordInitPresence();
 		}
 
 		SavePluginConfig(copy);
@@ -155,10 +156,7 @@ static INT_PTR CALLBACK OptionsProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 	{
 	case WM_INITDIALOG:
 	{
-		DlgOptionData* data = reinterpret_cast<DlgOptionData*>(lParam);
-		SetProp(hDlg, PROP_OPTION_DATA, reinterpret_cast<HANDLE>(data));
-
-		if (!InitializeControls(hDlg, *(data->_config)))
+		if (!InitializeControls(hDlg, config))
 			EndDialog(hDlg, FALSE);
 	}
 		return TRUE;
@@ -187,10 +185,10 @@ static INT_PTR CALLBACK OptionsProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 	return FALSE;
 }
 
-void ShowPluginDlgOption(DlgOptionData& data)
+void ShowPluginDlgOption()
 {
-	if (!DialogBoxParam(hPlugin, MAKEINTRESOURCE(IDD_PLUGIN_OPTIONS),
-		nppData._nppHandle, OptionsProc, (LPARAM)&data))
+	if (!DialogBox(hPlugin, MAKEINTRESOURCE(IDD_PLUGIN_OPTIONS),
+		nppData._nppHandle, OptionsProc))
 	{
 		ShowLastError();
 	}
