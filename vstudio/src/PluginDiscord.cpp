@@ -73,6 +73,9 @@ static const char* GetLanguageLargeImage(const char* extension)
 {
 	LangType current_lang = L_EXTERNAL;
 	SendMessage(nppData._nppHandle, NPPM_GETCURRENTLANGTYPE, 0, (LPARAM)&current_lang);
+#ifdef _DEBUG
+	printf(" > Current LangType: %d\n", static_cast<int>(current_lang));
+#endif // _DEBUG
 	switch (current_lang)
 	{
 	case L_JAVA:          return "java";
@@ -110,6 +113,9 @@ static const char* GetLanguageLargeImage(const char* extension)
 	default:
 		if (strcmp(extension, "gitignore") == 0)
 			return "git";
+		// In dark mode it is L_USER but it is ignored 
+		if (strcmp(extension, "md") == 0 || strcmp(extension, "markdown") == 0)
+			return "markdown";
 		break;
 	}
 	return nullptr;
@@ -117,7 +123,7 @@ static const char* GetLanguageLargeImage(const char* extension)
 
 static void UpdatePresence(FileData data = FileData())
 {
-	// Crear strings
+	// Clean strings
 	*rpc.details = *rpc.state = *rpc.assets.small_image = *rpc.assets.small_text = '\0';
 
 	if (*data.name)
