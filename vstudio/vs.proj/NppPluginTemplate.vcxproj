@@ -37,6 +37,7 @@
 	<ClInclude Include="..\src\PluginConfig.h" />
 	<ClInclude Include="..\src\PluginDlgOption.h" />
 	<ClInclude Include="..\src\PluginError.h" />
+	<ClInclude Include="..\src\PluginDiscord.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NppPluginDemo.cpp" />
@@ -44,6 +45,7 @@
 	<ClCompile Include="..\src\PluginConfig.cpp" />
 	<ClCompile Include="..\src\PluginDlgOption.cpp" />
 	<ClCompile Include="..\src\PluginError.cpp" />
+	<ClCompile Include="..\src\PluginDiscord.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\PluginResources.rc" />
