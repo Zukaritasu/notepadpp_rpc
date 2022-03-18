@@ -30,6 +30,7 @@ extern NppData nppData;
 extern HINSTANCE hPlugin;
 extern PluginConfig config;
 
+// GetProp / SetProp
 #define PROP_OPTION_DATA TEXT("OPTION_DATA")
 
 static bool CreateTooltipInfo(HWND hDlg)

@@ -52,13 +52,6 @@ extern PluginConfig config;
 extern NppData      nppData;
 extern std::mutex   mutex;
 
-static void SetDefaultValues(DiscordActivity& activity)
-{
-	ZeroMemory(&activity, sizeof(DiscordActivity));
-	activity.type             = DiscordActivityType_Playing;
-	activity.timestamps.start = _time64(nullptr);
-}
-
 static __int64 GetFileSize(TCHAR* filename)
 {
 	if (*filename && PathFileExists(filename))
@@ -165,19 +158,28 @@ static void UpdatePresence(FileData data = FileData())
 	if (loop_while)
 	{
 		mutex.lock();
-		IDiscordActivityManager* manager = core->get_activity_manager(core);
-		manager->update_activity(manager, &rpc, nullptr,
+		if (core != nullptr) // Possible null value 
+		{
+			IDiscordActivityManager* manager = core->get_activity_manager(core);
+			manager->update_activity(manager, &rpc, nullptr,
 #ifdef _DEBUG
-			[](void*, EDiscordResult result) {
-			if (result != DiscordResult_Ok)
-				printf("[RPC] Update presence | %d\n", static_cast<int>(result));
-		}
+				[](void*, EDiscordResult result) {
+				if (result != DiscordResult_Ok)
+					printf("[RPC] Update presence | %d\n", static_cast<int>(result));
+			}
 #else
-			nullptr
+				nullptr
 #endif // _DEBUG
 			);
+		}
 		mutex.unlock();
 	}
+}
+
+static void DiscordCoreDestroy()
+{
+	core->destroy(core);
+	core = nullptr;
 }
 
 static DWORD WINAPI RunCallBacks(LPVOID)
@@ -186,7 +188,7 @@ static DWORD WINAPI RunCallBacks(LPVOID)
 	DiscordCreateParamsSetDefault(&params);
 
 	params.client_id = config._client_id;
-	params.flags = DiscordCreateFlags_NoRequireDiscord;
+	params.flags     = DiscordCreateFlags_NoRequireDiscord;
 
 #ifdef _DEBUG
 	bool reconnecting = false;
@@ -201,8 +203,8 @@ reconnect:
 		case DiscordResult_InternalError:
 		case DiscordResult_NotRunning:
 #ifdef _DEBUG
-			printf(" > Reconnecting...\n");
 			reconnecting = true;
+			printf(" > Reconnecting...\n");
 #endif // _DEBUG
 
 			Sleep(2000);
@@ -228,8 +230,14 @@ reconnect:
 		printf(" > Successful reconnection!\n");
 #endif // _DEBUG
 
+	// To avoid resetting the elapsed time on each reconnection 
+	if (rpc.timestamps.start == 0) 
+	{
+		rpc.type             = DiscordActivityType_Playing;
+		rpc.timestamps.start = _time64(nullptr);
+	}
+	
 	loop_while = true;
-	SetDefaultValues(rpc);
 	UpdatePresence(filedata);
 
 	while (loop_while)
@@ -240,7 +248,13 @@ reconnect:
 		if (result != DiscordResult_Ok)
 			printf("[RUN] - %d\n", static_cast<int>(result));
 #else
-		core->run_callbacks(core);
+		if (core->run_callbacks(core) != DiscordResult_Ok)
+		{
+			loop_while = false;
+			DiscordCoreDestroy();
+			mutex.unlock();
+			goto reconnect;
+		}
 #endif // _DEBUG
 		mutex.unlock();
 		Sleep(1000 / 60);
@@ -318,7 +332,11 @@ void DiscordClosePresence()
 	if (thread)
 	{
 		if (!loop_while) // The cooldown for reconnection is active 
+		{
+			mutex.lock();
 			WaitForSingleObject(thread, 0);
+			mutex.unlock();
+		}
 		else // It waits until exiting the loop to finish the process 
 		{
 			loop_while = false;
@@ -331,10 +349,11 @@ void DiscordClosePresence()
 		{
 			auto activity_manager = core->get_activity_manager(core);
 			activity_manager->clear_activity(activity_manager, nullptr, nullptr);
-			core->destroy(core);
-			core = nullptr;
+			DiscordCoreDestroy();
 		}
-
+		
+		// The elapsed time is reset in case of a new reconnection  
+		rpc.timestamps.start = 0;
 #ifdef _DEBUG
 		printf(" > Presence has been closed\n");
 #endif // _DEBUG
