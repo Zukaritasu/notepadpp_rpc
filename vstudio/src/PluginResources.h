@@ -26,11 +26,11 @@
 #define IDC_GROUD_ID                    -1
 
 
-#define PLUGIN_VERSION                  1,3,155,1
-#define PLUGIN_VERSION_LONG             "1.3.155.1"
+#define PLUGIN_VERSION                  1,3,213,1
+#define PLUGIN_VERSION_LONG             "1.3.213.1"
 
 #define PLUGIN_ABOUT \
-	TEXT("Version " PLUGIN_VERSION_LONG "\nCopyright (c) 2022 Zukaritasu\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Nopetad++.")
+	TEXT("Version " PLUGIN_VERSION_LONG "\nCopyright (c) 2022 Zukaritasu\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")
 
 #define CREATE_DIRECTORY_ERROR \
 	TEXT("Could not create directory [%s] because a file with the same name exists")

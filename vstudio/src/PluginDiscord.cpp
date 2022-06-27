@@ -39,6 +39,12 @@ struct FileData
 	char  extension[MAX_PATH];
 };
 
+struct LanguageInfo
+{
+	const char* name;
+	const char* large_image;
+};
+
 namespace 
 {
 	FileData        filedata{};
@@ -62,56 +68,57 @@ static __int64 GetFileSize(TCHAR* filename)
 	return -1;
 }
 
-static const char* GetLanguageLargeImage(const char* extension)
+static LanguageInfo GetLanguageInfo(const char* extension)
 {
-	LangType current_lang = L_EXTERNAL;
+	LangType current_lang = L_TEXT;
 	SendMessage(nppData._nppHandle, NPPM_GETCURRENTLANGTYPE, 0, (LPARAM)&current_lang);
 #ifdef _DEBUG
-	printf(" > Current LangType: %d\n", static_cast<int>(current_lang));
+	printf("\n > Current LangType: %d\n", static_cast<int>(current_lang));
 #endif // _DEBUG
+
 	switch (current_lang)
 	{
-	case L_JAVA:          return "java";
+	case L_JAVA:          return { "JAVA", "java" };
 	case L_JAVASCRIPT: // Javascript and typescript
-	case L_JS:            
+	case L_JS:
 		if (strcmp(extension, "ts") == 0 || strcmp(extension, "tsx") == 0)
-			return "typescript";
-		return "javascript";
-	case L_C:             return "c";
-	case L_CPP:           return "cpp";
-	case L_CS:            return "csharp";
-	case L_CSS:           return "css";
-	case L_HASKELL:       return "haskell";
-	case L_HTML:          return "html";
-	case L_PHP:           return "php";
-	case L_PYTHON:        return "python";
-	case L_RUBY:          return "ruby";
-	case L_XML:           return "xml";
-	case L_VB:            return "visualbasic";
+			return               { "TYPESCRIPT", "typescript" };
+		return                   { "JAVASCRIPT", "javascript" };
+	case L_C:             return { "C", "c" };
+	case L_CPP:           return { "C++", "cpp" };
+	case L_CS:            return { "C#", "csharp"};
+	case L_CSS:           return { "CSS", "css" };
+	case L_HASKELL:       return { "HASKELL", "haskell" };
+	case L_HTML:          return { "HTML", "html" };
+	case L_PHP:           return { "PHP", "php" };
+	case L_PYTHON:        return { "PYTHON", "python" };
+	case L_RUBY:          return { "RUBY", "ruby" };
+	case L_XML:           return { "XML", "xml" };
+	case L_VB:            return { "VISUALBASIC", "visualbasic" };
 	case L_BASH:
-	case L_BATCH:         return "cmd";
-	case L_LUA:           return "lua";
-	case L_CMAKE:         return "cmake";
-	case L_PERL:          return "perl";
-	case L_JSON:          return "json";
-	case L_YAML:          return "yaml";
-	case L_OBJC:          return "objectivec";
-	case L_RUST:          return "rust";
-	case L_LISP:          return "lisp";
-	case L_R:             return "r";
-	case L_SWIFT:         return "swift";
-	case L_FORTRAN:       return "fortran";
-	case L_ERLANG:        return "erlang";
-	case L_COFFEESCRIPT:  return "coffeescript";
+	case L_BATCH:         return { "BATCH", "cmd" };
+	case L_LUA:           return { "LUA", "lua" };
+	case L_CMAKE:         return { "CMAKE", "cmake" };
+	case L_PERL:          return { "PERL", "perl" };
+	case L_JSON:          return { "JSON", "json" };
+	case L_YAML:          return { "YAML", "yaml" };
+	case L_OBJC:          return { "OBJECTIVE-C", "objectivec" };
+	case L_RUST:          return { "RUST", "rust" };
+	case L_LISP:          return { "LISP", "lisp" };
+	case L_R:             return { "R", "r" };
+	case L_SWIFT:         return { "SWIFT", "swift" };
+	case L_FORTRAN:       return { "FORTRAN", "fortran" };
+	case L_ERLANG:        return { "ERLANG", "erlang" };
+	case L_COFFEESCRIPT:  return { "COFFEESCRIPT", "coffeescript" };
 	default:
 		if (strcmp(extension, "gitignore") == 0)
-			return "git";
+			return               { "GITIGNORE", "git" };
 		// In dark mode it is L_USER but it is ignored 
 		if (strcmp(extension, "md") == 0 || strcmp(extension, "markdown") == 0)
-			return "markdown";
+			return               { "MARKDOWN", "markdown" };
 		break;
 	}
-	return nullptr;
+	return { "TEXT", nullptr };
 }
 
 static void UpdatePresence(FileData data = FileData())
@@ -134,16 +141,19 @@ static void UpdatePresence(FileData data = FileData())
 		}
 	}
 
+	LanguageInfo lang_info{};
+	
 	if (*data.extension)
-		sprintf(rpc.assets.large_text, "Editing a %s file", strupr(data.extension));
+	{
+		lang_info = GetLanguageInfo(strlwr(data.extension));
+		sprintf(rpc.assets.large_text, "Editing a %s file", lang_info.name);
+	}
 	else
 		strcpy(rpc.assets.large_text, NPP_NAME);
-
-	const char* large_image;
-	if (*data.path && config._show_lang && 
-		(large_image = GetLanguageLargeImage(strlwr(data.extension))))
+	
+	if (*data.path && config._show_lang && lang_info.large_image)
 	{
-		strcpy(rpc.assets.large_image, large_image);
+		strcpy(rpc.assets.large_image, lang_info.large_image);
 		strcpy(rpc.assets.small_image, DEFAULT_LANGIMAGE);
 		strcpy(rpc.assets.small_text, NPP_NAME);
 	}
