@@ -1,5 +1,7 @@
 # Discord Rich Presence for Notepad++
 
+![GitHub](https://img.shields.io/github/license/Zukaritasu/notepadpp_rpc) ![GitHub all releases](https://img.shields.io/github/downloads/Zukaritasu/notepadpp_rpc/total) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/Zukaritasu/notepadpp_rpc)
+
 Shows in Discord the file that is currently being edited in [Notepad++](https://github.com/notepad-plus-plus/notepad-plus-plus). Every time you open, close, save changes, or switch from one file to another, the presence is updated. In case the Notepad++ window is closed, the plugin is uninstalled or disabled from the options, the presence will disappear 
 
 ## Installation
