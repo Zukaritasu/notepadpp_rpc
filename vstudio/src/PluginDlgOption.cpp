@@ -68,6 +68,9 @@ static bool CreateTooltipInfo(HWND hDlg)
 	SetToolTip(IDC_ENABLE,        IDS_ENABLERPC);
 	SetToolTip(IDC_SHOW_FILESZ,   IDS_SHOWSIZE);
 	SetToolTip(IDC_SHOW_LANGICON, IDS_SHOWLANGICON);
+	SetToolTip(IDC_SHOW_ELAPSED_TIME, IDS_SHOWELAPSEDTIME);
+	SetToolTip(IDC_CURRENT_FILENAME, IDS_CURRENTFILENAME);
+	SetToolTip(IDC_RESET, IDS_BTNRESET);
 
 	return true;
 }
@@ -105,6 +108,8 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& config, bool initD
 	SetButtonCheck(IDC_ENABLE, config._enable);
 	SetButtonCheck(IDC_SHOW_FILESZ, config._show_sz);
 	SetButtonCheck(IDC_SHOW_LANGICON, config._show_lang);
+	SetButtonCheck(IDC_SHOW_ELAPSED_TIME, config._elapsed_time);
+	SetButtonCheck(IDC_CURRENT_FILENAME, config._current_file);
 
 	return true;
 }
@@ -120,19 +125,23 @@ static bool ProcessCommand(HWND hDlg)
 			== BST_CHECKED;
 	};
 
-	PluginConfig copy = config;
+	PluginConfig copy   = config;
 
-	copy._client_id = client_id;
-	copy._enable    = IsButtonChecked(IDC_ENABLE);
-	copy._show_sz   = IsButtonChecked(IDC_SHOW_FILESZ);
-	copy._show_lang = IsButtonChecked(IDC_SHOW_LANGICON);
+	copy._client_id    = client_id;
+	copy._enable       = IsButtonChecked(IDC_ENABLE);
+	copy._show_sz      = IsButtonChecked(IDC_SHOW_FILESZ);
+	copy._show_lang    = IsButtonChecked(IDC_SHOW_LANGICON);
+	copy._elapsed_time = IsButtonChecked(IDC_SHOW_ELAPSED_TIME);
+	copy._current_file = IsButtonChecked(IDC_CURRENT_FILENAME);
 
 	if (memcmp(&copy, &config, sizeof(PluginConfig)) != 0)
 	{
 #ifdef _DEBUG
 		printf("\n > New configuration:"
-			   "\n-> client id: %lld\n-> enable: %d\n-> show file size: %d\n-> show lang icon: %d\n", 
-			   copy._client_id, copy._enable, copy._show_sz, copy._show_lang);
+			   "\n-> client id: %lld\n-> enable: %d\n-> show file size: %d\n-> show lang icon: %d\n-> show elapsed time: %d"
+			   "\n-> current filename: %d", 
+			   copy._client_id, copy._enable, copy._show_sz, copy._show_lang,
+			   copy._elapsed_time, copy._current_file);
 #endif // _DEBUG
 		memcpy(&config, &copy, sizeof(PluginConfig));
 		if (!copy._enable)

@@ -9,3 +9,18 @@
 	Some errors and security problems in the source code were also
 	corrected, on the other hand if you notice that something is
 	wrong with the plugin, notify me let know so I can fix it!
+	
+[Version 1.4]
+	In this new version, new options were added to modify the presence
+	in discord a little more. The option "Show current file" was
+	added, its function is to hide or show the name of the file that
+	is being edited, in addition a second option "Show elapsed time"
+	was added, its function is to hide or show the time elapsed since
+	it started the Notepad++ application
+
+	Other improvements:
+	- Added a description of the "Reset" button in the options window
+	- Now the file extension is not shown as before "Editing a CPP file"
+	  now the respective name of the language "Editing a C++ file" is shown
+	- Added support for Windows resource files, now it shows as
+	  "Editing a RESOURCE file"

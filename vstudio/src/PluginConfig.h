@@ -15,13 +15,20 @@
 
 #pragma once
 
+#pragma pack(push)
+#pragma pack(1)
+
 struct PluginConfig
 {
 	__int64 _client_id;
 	bool _enable;
 	bool _show_sz;
 	bool _show_lang;
+	bool _elapsed_time;
+	bool _current_file;
 };
+
+#pragma pack(pop)
 
 void LoadDefaultConfig(PluginConfig& config);
 void SavePluginConfig(const PluginConfig& config);

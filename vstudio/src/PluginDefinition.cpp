@@ -74,8 +74,8 @@ void commandMenuInit()
 		ID_SUB_CLSPROC, 0);
 
 	setCommand(0, TEXT("Options"), OptionsPlugin);
-	setCommand(1, nullptr, nullptr);
-	setCommand(2, TEXT("About"), About);
+	setCommand(1, nullptr,         nullptr);
+	setCommand(2, TEXT("About"),   About);
 }
 
 void commandMenuCleanUp()

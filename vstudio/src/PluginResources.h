@@ -22,15 +22,17 @@
 #define IDC_SHOW_FILESZ                 1008
 #define IDC_RESET                       1009
 #define IDC_SHOW_LANGICON               1010
+#define IDC_SHOW_ELAPSED_TIME           1011
+#define IDC_CURRENT_FILENAME            1012
 #define IDC_STATIC                      -1
 #define IDC_GROUD_ID                    -1
 
 
-#define PLUGIN_VERSION                  1,3,213,1
-#define PLUGIN_VERSION_LONG             "1.3.213.1"
+#define PLUGIN_VERSION                  1,4,262,1
+#define PLUGIN_VERSION_LONG             "1.4.262.1"
 
 #define PLUGIN_ABOUT \
-	TEXT("Version " PLUGIN_VERSION_LONG "\nCopyright (c) 2022 Zukaritasu\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")
+	TEXT("Discord Rich Presence by Zukaritasu\n\nVersion " PLUGIN_VERSION_LONG "\n\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")
 
 #define CREATE_DIRECTORY_ERROR \
 	TEXT("Could not create directory [%s] because a file with the same name exists")
@@ -39,3 +41,11 @@
 #define IDS_CLIENTID                    102
 #define IDS_SHOWSIZE                    103
 #define IDS_SHOWLANGICON                104
+#define IDS_SHOWELAPSEDTIME             105
+#define IDS_CURRENTFILENAME             106
+#define IDS_BTNRESET                    107
+
+#define IDI_DISCORD                     101
+#define IDI_DISCORD_DARK                102
+
+#define IDB_DISCORD                     101

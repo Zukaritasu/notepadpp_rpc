@@ -68,6 +68,25 @@ static __int64 GetFileSize(TCHAR* filename)
 	return -1;
 }
 
+// Turns elapsed time on or off depending on the 
+// PluginConfig::_elapsed_time value. It is not used to reset the time!!
+// because 'config._elapsed_time' might be true and prevent reset
+static void ValidateElapsedTime()
+{
+	if (config._elapsed_time) 
+	{
+		if (rpc.timestamps.start == 0) 
+		{
+			rpc.type = DiscordActivityType_Playing;
+			rpc.timestamps.start = _time64(nullptr);
+		}
+	} 
+	else if (rpc.timestamps.start != 0)
+	{
+		rpc.timestamps.start = 0;
+	}
+}
+
 static LanguageInfo GetLanguageInfo(const char* extension)
 {
 	LangType current_lang = L_TEXT;
@@ -110,6 +129,7 @@ static LanguageInfo GetLanguageInfo(const char* extension)
 	case L_FORTRAN:       return { "FORTRAN", "fortran" };
 	case L_ERLANG:        return { "ERLANG", "erlang" };
 	case L_COFFEESCRIPT:  return { "COFFEESCRIPT", "coffeescript" };
+	case L_RC:            return { "RESOURCE", nullptr };
 	default:
 		if (strcmp(extension, "gitignore") == 0)
 			return               { "GITIGNORE", "git" };
@@ -123,12 +143,14 @@ static LanguageInfo GetLanguageInfo(const char* extension)
 
 static void UpdatePresence(FileData data = FileData())
 {
+	ValidateElapsedTime();
 	// Clean strings
 	*rpc.details = *rpc.state = *rpc.assets.small_image = *rpc.assets.small_text = '\0';
 
 	if (*data.name)
 	{
-		sprintf(rpc.details, "Editing: %s", data.name);
+		if (config._current_file)
+			sprintf(rpc.details, "Editing: %s", data.name);
 		if (config._show_sz)
 		{
 			__int64 file_size = GetFileSize(data.path);
@@ -240,16 +262,17 @@ reconnect:
 		printf(" > Successful reconnection!\n");
 #endif // _DEBUG
 
-	// To avoid resetting the elapsed time on each reconnection 
+	ValidateElapsedTime();
+	/*// To avoid resetting the elapsed time on each reconnection 
 	if (rpc.timestamps.start == 0) 
 	{
 		rpc.type             = DiscordActivityType_Playing;
 		rpc.timestamps.start = _time64(nullptr);
-	}
+	}*/
 	
 	loop_while = true;
 	UpdatePresence(filedata);
-
+	
 	while (loop_while)
 	{
 		mutex.lock();

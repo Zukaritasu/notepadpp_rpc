@@ -67,10 +67,12 @@ static TCHAR* GetFileConfig(TCHAR* filename)
 
 void LoadDefaultConfig(PluginConfig& config)
 {
-	config._enable    = true;
-	config._show_sz   = true;
-	config._client_id = DEFAULT_CLIENT_ID;
-	config._show_lang = true;
+	config._enable       = true;
+	config._show_sz      = true;
+	config._client_id    = DEFAULT_CLIENT_ID;
+	config._show_lang    = true;
+	config._elapsed_time = true;
+	config._current_file = true;
 }
 
 void SavePluginConfig(const PluginConfig& config)
@@ -101,9 +103,8 @@ void LoadPluginConfig(PluginConfig& config)
 		if (file.is_open())
 		{
 			// Verify that the number of bytes read matches the
-			// size of the structure 
-			set_default = file.read((char*)&config,
-				sizeof(PluginConfig)).gcount() != sizeof(PluginConfig);
+			// size of the structure
+			set_default = file.read((char*)&config, sizeof(PluginConfig)).gcount() < sizeof(PluginConfig);
 			file.close();
 #ifdef _DEBUG
 			if (set_default)
