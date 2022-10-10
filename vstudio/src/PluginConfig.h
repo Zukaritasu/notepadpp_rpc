@@ -15,22 +15,18 @@
 
 #pragma once
 
-#pragma pack(push)
-#pragma pack(1)
-
 struct PluginConfig
 {
 	__int64 _client_id;
+	char _details_format[128];
+	char _state_format[128];
 	bool _enable;
-	bool _show_sz;
-	bool _show_lang;
+	bool _hide_state;
+	bool _lang_image;
 	bool _elapsed_time;
-	bool _current_file;
+	bool _hide_details;
 };
 
-#pragma pack(pop)
-
-void LoadDefaultConfig(PluginConfig& config);
-void SavePluginConfig(const PluginConfig& config);
-void LoadPluginConfig(PluginConfig& config);
-
+void LoadConfig(PluginConfig& config);
+void GetDefaultConfig(PluginConfig& config);
+void SaveConfig(const PluginConfig& config);

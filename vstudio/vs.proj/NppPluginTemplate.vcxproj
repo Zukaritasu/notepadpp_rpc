@@ -34,18 +34,20 @@
     <ClInclude Include="..\src\Sci_Position.h" />
     <ClInclude Include="..\src\PluginResources.h" />
     <ClInclude Include="..\src\menuCmdID.h" />
-	<ClInclude Include="..\src\PluginConfig.h" />
-	<ClInclude Include="..\src\PluginDlgOption.h" />
-	<ClInclude Include="..\src\PluginError.h" />
-	<ClInclude Include="..\src\PluginDiscord.h" />
+    <ClInclude Include="..\src\PluginConfig.h" />
+    <ClInclude Include="..\src\PluginDlgOption.h" />
+    <ClInclude Include="..\src\PluginError.h" />
+    <ClInclude Include="..\src\PluginDiscord.h" />
+	<ClInclude Include="..\src\PluginUtil.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NppPluginDemo.cpp" />
     <ClCompile Include="..\src\PluginDefinition.cpp" />
-	<ClCompile Include="..\src\PluginConfig.cpp" />
-	<ClCompile Include="..\src\PluginDlgOption.cpp" />
-	<ClCompile Include="..\src\PluginError.cpp" />
-	<ClCompile Include="..\src\PluginDiscord.cpp" />
+    <ClCompile Include="..\src\PluginConfig.cpp" />
+    <ClCompile Include="..\src\PluginDlgOption.cpp" />
+    <ClCompile Include="..\src\PluginError.cpp" />
+    <ClCompile Include="..\src\PluginDiscord.cpp" />
+	<ClCompile Include="..\src\PluginUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\PluginResources.rc" />
@@ -191,7 +193,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;comctl32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;discord_game_sdk.lib;%(AdditionalDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;comctl32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -260,8 +262,7 @@ copy ..\readme.FIRST ..\bin64\readme.FIRST</Command>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;comctl32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;discord_game_sdk.lib;%(AdditionalDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <ImportLibrary>$(TargetName).lib</ImportLibrary>
+      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;comctl32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy ..\license.txt ..\arm64\license.txt

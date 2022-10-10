@@ -24,8 +24,7 @@
 #include <cstdio>
 #include <mutex>
 
-#pragma warning(disable: 4100)
-#pragma warning(disable: 4996)
+#pragma warning(disable: 4100 4996)
 
 // ==================================================================
 // TEMPLATE VARIABLES
@@ -40,14 +39,15 @@ NppData nppData;
 // ==================================================================
 
 
-PluginConfig config{}; // extern symbol
-HINSTANCE    hPlugin = nullptr; // extern symbol
-std::mutex   mutex; // extern symbol
+PluginConfig config{};
+HINSTANCE    hPlugin = nullptr;
+std::mutex   mutex;
 
 static LRESULT CALLBACK SubClassProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 	LPARAM lParam, UINT_PTR, DWORD_PTR)
 {
-	switch (uMsg) {
+	switch (uMsg) 
+	{
 	case WM_SETTEXT:
 		DiscordUpdatePresence(hWnd, lParam);
 		break;
@@ -67,15 +67,15 @@ static LRESULT CALLBACK SubClassProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 
 void commandMenuInit()
 {
-	LoadPluginConfig(config);
+	LoadConfig(config);
 	DiscordInitPresence();
 
 	SetWindowSubclass(nppData._nppHandle, SubClassProc,
 		ID_SUB_CLSPROC, 0);
 
-	setCommand(0, TEXT("Options"), OptionsPlugin);
-	setCommand(1, nullptr,         nullptr);
-	setCommand(2, TEXT("About"),   About);
+	setCommand(0, _T("Options"), OptionsPlugin);
+	setCommand(1, nullptr,       nullptr);
+	setCommand(2, _T("About"),   About);
 }
 
 void commandMenuCleanUp()
@@ -90,7 +90,7 @@ void pluginInit(HANDLE handle)
 	AllocConsole();
 	freopen("CONOUT$", "w", stdout);
 
-	printf(" > Plugin init\n");
+	printf(" > The plugin has been started\n");
 #endif // _DEBUG
 	hPlugin = reinterpret_cast<HINSTANCE>(handle);
 }

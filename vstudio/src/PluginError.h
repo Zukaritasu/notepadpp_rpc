@@ -18,6 +18,6 @@
 #include <discord_game_sdk.h>
 #include <Windows.h>
 
-void ShowErrorMessage(const TCHAR* message, HWND hWnd = nullptr);
+void ShowErrorMessage(LPCTSTR message, HWND hWnd = nullptr);
 void ShowLastError();
 void ShowDiscordError(EDiscordResult result);

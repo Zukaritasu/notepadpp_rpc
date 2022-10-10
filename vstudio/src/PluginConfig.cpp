@@ -21,102 +21,112 @@
 #include <Windows.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
-#include <cstdio>
-#include <fstream>
 
-#pragma warning(disable: 4996)
+extern NppData nppData;
 
-#define DIRECTORY_PLUGIN_NAME TEXT("DiscordRPC")
-#define FILE_CONFIG_NAME      TEXT("rpc_config.dat")
+#pragma warning(disable: 4996) // wcscpy
 
-static bool CreateDirectoryPlugin(const TCHAR* dir)
+static LPTSTR GetFileNameConfig(LPTSTR buffer, int size)
 {
-	if (!PathFileExists(dir) && !CreateDirectory(dir, nullptr))
-	{
-		ShowLastError();
-		return false;
-	}
-	else if (!PathIsDirectory(dir))
-	{
-		TCHAR error[520];
-		StringCbPrintf(error, sizeof(error), 
-					   CREATE_DIRECTORY_ERROR, dir);
-		ShowErrorMessage(dir);
-		return false;
-	}
-	return true;
+	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, size, (LPARAM)buffer);
+	StringCbCat(buffer, sizeof(TCHAR) * size, _T("\\DiscordRPC.ini"));
+	return buffer;
 }
 
-static TCHAR* GetFileConfig(TCHAR* filename)
+#define APPNAME _T("DiscordRPC")
+
+void LoadConfig(PluginConfig& config)
 {
-	int count = GetEnvironmentVariable(TEXT("LOCALAPPDATA"), 
-				filename, MAX_PATH);
-	if (count > 0)
+	TCHAR file[MAX_PATH] = { 0 };
+	GetFileNameConfig(file, MAX_PATH);
+
+	if (!PathFileExists(file))
 	{
-		lstrcat(filename, TEXT("\\") DIRECTORY_PLUGIN_NAME);
-		if (CreateDirectoryPlugin(filename))
-		{
-			lstrcat(filename, TEXT("\\") FILE_CONFIG_NAME);
-			return filename;
-		}
+		GetDefaultConfig(config);
+		return;
 	}
-	else
-		ShowLastError();
-	return nullptr;
+
+	auto GetBool = [&file](LPCTSTR key) -> bool
+	{
+		return GetPrivateProfileInt(APPNAME, key, 1, file) == 1;
+	};
+
+	config._hide_details = GetBool(_T("hideDetails"));
+	config._elapsed_time = GetBool(_T("elapsedTime"));
+	config._enable       = GetBool(_T("enable"));
+	config._lang_image   = GetBool(_T("langImage"));
+	config._hide_state   = GetBool(_T("hideState"));
+
+	TCHAR id[19] = { 0 };
+
+	int count = GetPrivateProfileString(APPNAME, _T("clientId"), _T(DEF_APPLICATION_ID_STR), id, 19, file);
+	if (count != 18 || (config._client_id = _tstoi64(id)) < 1E17)
+		config._client_id = DEF_APPLICATION_ID;
+
+#ifndef UNICODE
+	GetPrivateProfileString(APPNAME, "detailsFormat", DEF_DETAILS_FORMAT,
+		config._details_format, 128, file);
+	GetPrivateProfileString(APPNAME, "stateFormat", DEF_STATE_FORMAT,
+		config._state_format, 128, file);
+#else
+	auto GetProperty = [&file](/*128*/char* buffer, LPCWSTR key, LPCWSTR defValue)
+	{
+		wchar_t value[128] = { 0 };
+		GetPrivateProfileString(APPNAME, key, defValue, value, 128, file);
+		if (value[0] == L'\0') // key= ?
+			wcscpy(value, defValue);
+		WideCharToMultiByte(CP_UTF8, 0, value, -1, buffer, 128, nullptr, false);
+	};
+
+	GetProperty(config._details_format, L"detailsFormat", _T(DEF_DETAILS_FORMAT));
+	GetProperty(config._state_format, L"stateFormat", _T(DEF_STATE_FORMAT));
+#endif // UNICODE
 }
 
-void LoadDefaultConfig(PluginConfig& config)
+void GetDefaultConfig(PluginConfig& config)
 {
-	config._enable       = true;
-	config._show_sz      = true;
-	config._client_id    = DEFAULT_CLIENT_ID;
-	config._show_lang    = true;
+	config._hide_details = false;
 	config._elapsed_time = true;
-	config._current_file = true;
+	config._enable       = true;
+	config._lang_image   = true;
+	config._hide_state   = false;
+	config._client_id    = DEF_APPLICATION_ID;
+
+	strcpy(config._details_format, DEF_DETAILS_FORMAT);
+	strcpy(config._state_format, DEF_STATE_FORMAT);
 }
 
-void SavePluginConfig(const PluginConfig& config)
+void SaveConfig(const PluginConfig& config)
 {
-	TCHAR filename[MAX_PATH];
-	if (GetFileConfig(filename) != nullptr)
-	{
-		std::ofstream file(filename);
-		if (file.is_open())
-		{
-			file.write((const char*)&config, sizeof(PluginConfig));
-			file.close();
-#ifdef _DEBUG
-			printf(" > Configuration has been saved successfully!\n");
-#endif // _DEBUG
-		}
-	}
-}
+	TCHAR file[MAX_PATH] = { 0 };
+	GetFileNameConfig(file, MAX_PATH);
 
-void LoadPluginConfig(PluginConfig& config)
-{
-	TCHAR filename[MAX_PATH];
+	auto WriteBool = [&file](LPCTSTR key, bool value) -> void
+	{
+		WritePrivateProfileString(APPNAME, key, value ? _T("1") : _T("0"), file);
+	};
 
-	bool set_default = true;
-	if (GetFileConfig(filename) != nullptr)
-	{
-		std::ifstream file(filename);
-		if (file.is_open())
-		{
-			// Verify that the number of bytes read matches the
-			// size of the structure
-			set_default = file.read((char*)&config, sizeof(PluginConfig)).gcount() < sizeof(PluginConfig);
-			file.close();
-#ifdef _DEBUG
-			if (set_default)
-				printf(" > Error loading configuration!\n");
-			else
-				printf(" > The configuration has been loaded successfully!\n");
-#endif // _DEBUG
-		}
-	}
-	if (set_default)
-	{
-		LoadDefaultConfig(config);
-		SavePluginConfig(config);
-	}
+	WriteBool(_T("hideDetails"), config._hide_details);
+	WriteBool(_T("elapsedTime"), config._elapsed_time);
+	WriteBool(_T("enable"),      config._enable);
+	WriteBool(_T("langImage"),   config._lang_image);
+	WriteBool(_T("hideState"),   config._hide_state);
+
+	TCHAR id[19];
+	StringCbPrintf(id, sizeof(id), _T("%I64d"), config._client_id);
+	WritePrivateProfileString(APPNAME, _T("clientId"), id, file);
+	
+#ifdef UNICODE
+	wchar_t buf[128] = { 0 };
+	MultiByteToWideChar(CP_UTF8, 0, config._details_format, -1, buf, 128);
+	WritePrivateProfileString(APPNAME, L"detailsFormat", buf, file);
+
+	MultiByteToWideChar(CP_UTF8, 0, config._state_format, -1, buf, 128);
+	WritePrivateProfileString(APPNAME, L"stateFormat", buf, file);
+#else
+	WritePrivateProfileString(APPNAME, "detailsFormat", config._details_format, file);
+	WritePrivateProfileString(APPNAME, "stateFormat", config._state_format, file);
+#endif // UNICODE
+
+	
 }

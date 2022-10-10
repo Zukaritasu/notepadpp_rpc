@@ -37,13 +37,6 @@ bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
 // FUNCTIONS OF THE PLUGIN 
 // ==================================================================
 
-#define TITLE_MBOX_DRPC     TEXT("Discord RPC")
-// Default client ID
-#define DEFAULT_CLIENT_ID   938157386068279366
-#define DEF_CLIENT_ID_STR   "938157386068279366"
-// Client id minimum allowed 
-#define MIN_CLIENT_ID       100000000000000000
-
 void OptionsPlugin();
 void About();
 

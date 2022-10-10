@@ -15,8 +15,9 @@
 
 #include "PluginError.h"
 #include "PluginDefinition.h"
+#include "PluginResources.h"
 
-#pragma warning(disable: 4996)
+#pragma warning(disable: 4996 4100)
 
 #ifndef _DEBUG
 #include "PluginInterface.h"
@@ -25,6 +26,7 @@ extern NppData nppData;
 #endif // _DEBUG
 
 #include <tchar.h>
+#include <strsafe.h>
 
 #ifndef _DEBUG
 #include <string>
@@ -36,36 +38,32 @@ extern NppData nppData;
 #endif // UNICODE
 #endif // _DEBUG
 
-void ShowErrorMessage(const TCHAR* message, HWND hWnd)
+
+void ShowErrorMessage(LPCTSTR message, HWND hWnd)
 {
 #ifdef _DEBUG
-	_tprintf(TEXT(" > %s\n"), message);
+	_tprintf(_T(" > Error: %s\n"), message);
 #else
-	MessageBox(hWnd ? hWnd : nppData._nppHandle, message,
+	MessageBox(hWnd != nullptr ? hWnd : nppData._nppHandle, message,
 		TITLE_MBOX_DRPC, MB_ICONERROR | MB_OK);
 #endif // _DEBUG
 }
 
-#define GetErrorMessage(pmsg, code) \
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | \
-				  FORMAT_MESSAGE_ALLOCATE_BUFFER, \
-				  nullptr, code, 0, reinterpret_cast<TCHAR*>(pmsg), 0, nullptr)
-				  
 void ShowLastError()
 {
-	unsigned long error_code = GetLastError();
-	if (error_code != 0)
+	auto code = GetLastError();
+	if (code != ERROR_SUCCESS)
 	{
-		TCHAR* message = nullptr;
-		if (GetErrorMessage(&message, error_code) > 0 && message)
+		LPTSTR message = nullptr;
+		auto count = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |  FORMAT_MESSAGE_ALLOCATE_BUFFER, 
+								   nullptr, code, 0, reinterpret_cast<LPTSTR>(message), 0, nullptr);
+		if (count > 0 && message != nullptr)
 		{
 #ifdef _DEBUG
 			ShowErrorMessage(message);
 #else
-			String msg_format;
-			msg_format += TEXT("An error has occurred in the plugin. Reason:\n\n");
-			msg_format += message;
-			ShowErrorMessage(msg_format.c_str());
+			String msg_format(_T("An error has occurred in the plugin. Reason:\n\n"));
+			ShowErrorMessage(msg_format.append(message).c_str());
 #endif // _DEBUG
 			
 			LocalFree(message);
@@ -74,20 +72,14 @@ void ShowLastError()
 }
 
 #define DISCORD_ERROR_FORMAT \
-	TEXT("An error has occurred in Discord. Error code: %d")
-
-#ifdef UNICODE
-#define BUF_E_SIZE (sizeof(DISCORD_ERROR_FORMAT) / 2)
-#else
-#define BUF_E_SIZE (sizeof(DISCORD_ERROR_FORMAT))
-#endif // UNICODE
+	_T("An error has occurred in Discord. Error code: %d")
 
 void ShowDiscordError(EDiscordResult result)
 {
 	if (result != DiscordResult_Ok)
 	{
-		TCHAR error[BUF_E_SIZE]{};
-		_stprintf(error, DISCORD_ERROR_FORMAT, static_cast<int>(result));
-		ShowErrorMessage(error);
+		TCHAR buf[128];
+		StringCbPrintf(buf, sizeof(buf), DISCORD_ERROR_FORMAT, static_cast<int>(result));
+		ShowErrorMessage(buf);
 	}
 }
