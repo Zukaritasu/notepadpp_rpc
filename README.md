@@ -17,6 +17,13 @@ And paste the content into that folder. If you had Notepad++ open then you shoul
 
 ![](./sample_rpc.png)
 
+If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/xEtAtmU6 and go to the #npp-support channel and leave your question with the following information
+
+* What version of Windows do you have?
+* 32 or 64 bits architecture?
+* The version of Notepad++ you have
+* The DiscordRPC plugin version
+
 ## Discord SDK Information
 
 * [SDK Starter Guide](https://discord.com/developers/docs/game-sdk/sdk-starter-guide)
