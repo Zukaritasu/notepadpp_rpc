@@ -11,13 +11,14 @@ To add the plugin to Notepad++, you need to download the zipped file based on yo
  * **C:\Program Files (x86)\Notepad++\plugins**
 
 You need to create a folder named DiscordRPC 
-* **C:\Program Files\Notepad++\plugins\DiscordRPC**
+ * **C:\Program Files\Notepad++\plugins\DiscordRPC**
 
 And paste the content into that folder. If you had Notepad++ open then you should close it and open it again and check if it shows in your profile
 
 ![](./sample_rpc.png)
 
-If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/xEtAtmU6 and go to the #npp-support channel and leave your question with the following information
+## Support
+If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/xEtAtmU6 and go to the **#npp-support** channel and leave your question with the following information:
 
 * What version of Windows do you have?
 * 32 or 64 bits architecture?
