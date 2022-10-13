@@ -27,8 +27,8 @@ If you have any problems with the plugin or have any questions about its functio
 
 ## Documentation
 
-[Create rich personalized presence](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
-[Options window](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
+* [Create rich personalized presence](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
+* [Options window](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
 
 ## Discord SDK Information
 
