@@ -25,6 +25,11 @@ If you have any problems with the plugin or have any questions about its functio
 * The version of Notepad++ you have
 * The DiscordRPC plugin version
 
+## Documentation
+
+[Create rich personalized presence](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
+[Options window](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
+
 ## Discord SDK Information
 
 * [SDK Starter Guide](https://discord.com/developers/docs/game-sdk/sdk-starter-guide)
