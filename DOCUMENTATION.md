@@ -1,6 +1,6 @@
 ## Create rich personalized presence
 
-To create a custom rich presence you must create an [application for discord](https://discord.com/developers/applications), if you already have an application created you only need the ID and enter it in the text field in the "Custom Application id" options window... Now we need to upload the images in the application
+To create a custom rich presence you must create an [application for discord](https://discord.com/developers/applications), if you already have an application created you only need the ID and enter it in the text field in the "Custom Application id" options window... Now we need to upload the images in the application, going to the [Rich Presence > Art Assets] section
 
 ![](./images/doc_image_1.png)
 
