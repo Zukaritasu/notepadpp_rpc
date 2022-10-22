@@ -18,6 +18,8 @@
 #include "PluginConfig.h"
 #include "discord_game_sdk.h"
 #include "PluginInterface.h"
+#include "PluginRPCFormat.h"
+#include "PluginUtil.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -31,234 +33,127 @@
 
 #pragma warning(disable: 4996)
 
-#define NPP_DEFAULTIMAGE  "favicon"
 #define NPP_NAME          "Notepad++"
 
-struct FileInfo
-{
-	char  name[MAX_PATH];
-	TCHAR path[MAX_PATH];
-	char  extension[MAX_PATH];
-};
-
-struct LanguageInfo
-{
-	const char* name;
-	const char* large_image;
-};
-
-namespace 
-{
-	FileInfo        filedata{};
-	DiscordActivity rpc{};
-	IDiscordCore*   core = nullptr;
-	HANDLE          thread = nullptr;
-	HANDLE          monitor = nullptr;
-	volatile bool   loop_while = false;
-	std::mutex      sci_status;
-}
 
 extern PluginConfig config;
 extern NppData      nppData;
-extern std::mutex   mutex;
+std::mutex          mutex;
 
-#define BUFFERSIZE sizeof(DiscordActivity::details)
-
-// Return details of RPC, example: "Editing: %file [%line,%column]"
-static char* GetDetails(/*128*/ char* buf, const char* format, const FileInfo& info);
-static char* GetState(/*128*/ char* buf, const char* format);
-
-static HWND GetCurrentScintilla()
+namespace 
 {
-	int which = -1;
-	SendMessage(nppData._nppHandle, NPPM_GETCURRENTSCINTILLA, 0, (LPARAM)&which);
-	if (which == -1)
-		return nullptr;
-	return (which == 0) ? nppData._scintillaMainHandle : nppData._scintillaSecondHandle;
+	// current file information
+	FileInfo        filedata{}; 
+	// the rich presence of the current file
+	DiscordActivity rpc{};
+	std::unique_ptr<IDiscordCore> _core;
+	// thread that keeps active the rich presence
+	HANDLE          run_callbacks  = nullptr; 
+	// Updates the rich presence every so often by
+	// changes in the editor, including the number of lines in the file
+	HANDLE          sci_status     = nullptr;  
+	volatile bool   rpc_active     = false;
 }
 
-// Turns elapsed time on or off depending on the 
-// PluginConfig::_elapsed_time value. It is not used to reset the time!!
-// because 'config._elapsed_time' might be true and prevent reset
-static void ValidateElapsedTime()
+static void InitializeElapsedTime()
 {
-	if (config._elapsed_time) 
-	{
-		if (rpc.timestamps.start == 0) 
-		{
-			rpc.type = DiscordActivityType_Playing;
-			rpc.timestamps.start = _time64(nullptr);
-		}
-	} 
-	else if (rpc.timestamps.start != 0)
-	{
+	if (!config._elapsed_time) 
 		rpc.timestamps.start = 0;
+	else if (rpc.timestamps.start == 0) 
+	{	
+		rpc.type = DiscordActivityType_Playing;
+		rpc.timestamps.start = _time64(nullptr);
 	}
-}
-
-static LanguageInfo GetLanguageInfo(const char* extension)
-{
-	LangType current_lang = L_TEXT;
-	SendMessage(nppData._nppHandle, NPPM_GETCURRENTLANGTYPE, 0, (LPARAM)&current_lang);
-#ifdef _DEBUG
-	printf("\n > Current LangType: %d\n", static_cast<int>(current_lang));
-#endif // _DEBUG
-
-	switch (current_lang)
-	{
-	case L_JAVA:          return { "JAVA", "java" };
-	case L_JAVASCRIPT: // Javascript and typescript
-	case L_JS:
-		if (strcmp(extension, "ts") == 0 || strcmp(extension, "tsx") == 0)
-			return               { "TYPESCRIPT", "typescript" };
-		return                   { "JAVASCRIPT", "javascript" };
-	case L_C:             return { "C", "c" };
-	case L_CPP:           return { "C++", "cpp" };
-	case L_CS:            return { "C#", "csharp"};
-	case L_CSS:           return { "CSS", "css" };
-	case L_HASKELL:       return { "HASKELL", "haskell" };
-	case L_HTML:          return { "HTML", "html" };
-	case L_PHP:           return { "PHP", "php" };
-	case L_PYTHON:        return { "PYTHON", "python" };
-	case L_RUBY:          return { "RUBY", "ruby" };
-	case L_XML:           return { "XML", "xml" };
-	case L_VB:            return { "VISUALBASIC", "visualbasic" };
-	case L_BASH:
-	case L_BATCH:         return { "BATCH", "cmd" };
-	case L_LUA:           return { "LUA", "lua" };
-	case L_CMAKE:         return { "CMAKE", "cmake" };
-	case L_PERL:          return { "PERL", "perl" };
-	case L_JSON:          return { "JSON", "json" };
-	case L_YAML:          return { "YAML", "yaml" };
-	case L_OBJC:          return { "OBJECTIVE-C", "objectivec" };
-	case L_RUST:          return { "RUST", "rust" };
-	case L_LISP:          return { "LISP", "lisp" };
-	case L_R:             return { "R", "r" };
-	case L_SWIFT:         return { "SWIFT", "swift" };
-	case L_FORTRAN:       return { "FORTRAN", "fortran" };
-	case L_ERLANG:        return { "ERLANG", "erlang" };
-	case L_COFFEESCRIPT:  return { "COFFEESCRIPT", "coffeescript" };
-	case L_RC:            return { "RESOURCE", nullptr };
-	default:
-		if (strcmp(extension, ".gitignore") == 0)
-			return               { "GIT", "git" };
-		// In dark mode it is L_USER but it is ignored 
-		if (strcmp(extension, ".md") == 0 || strcmp(extension, ".markdown") == 0)
-			return               { "MARKDOWN", "markdown" };
-		break;
-	}
-	return { "TEXT", nullptr };
 }
 
 static void UpdateRPCScintillaStatus(const FileInfo& info)
 {
-	sci_status.lock();
-	if (*info.name)
+	mutex.lock();
+	
+	rpc.details[0] = rpc.state[0] = '\0';
+	if (*info.name && _core)
 	{
 		if (!config._hide_details)
-			GetDetails(rpc.details, config._details_format, info);
+			ProcessFormat(rpc.details, config._details_format, &info);
 		if (!config._hide_state)
-			GetState(rpc.state, config._state_format);
-	}
-	
-	mutex.lock();
-	if (core != nullptr) // Possible null value 
-	{
-		IDiscordActivityManager* manager = core->get_activity_manager(core);
-		manager->update_activity(manager, &rpc, nullptr, nullptr);
+			ProcessFormat(rpc.state, config._state_format, &info);
+#ifdef _DEBUG
+		printf("\n\n Updating...\n - %s\n - %s\n - %s\n", rpc.details, rpc.state, rpc.assets.large_text);
+#endif // _DEBUG
+
+		IDiscordActivityManager* manager = _core->get_activity_manager(_core.get());
+		manager->update_activity(manager, &rpc, nullptr,
+#ifdef _DEBUG
+			[](void*, EDiscordResult result) {
+			if (result != DiscordResult_Ok)
+				printf("[RPC] Update presence | %d\n", static_cast<int>(result));
+		}
+#else
+			nullptr
+#endif // _DEBUG
+			);
 	}
 	mutex.unlock();
-	sci_status.unlock();
 }
 
 static void UpdatePresence(FileInfo info = FileInfo())
 {
-	ValidateElapsedTime();
-	// Clean strings
-	*rpc.details = *rpc.state = *rpc.assets.small_image = *rpc.assets.small_text = '\0';
-
+	InitializeElapsedTime();
+	
+	auto& look = rpc.assets;
+	look.small_image[0] = look.small_text[0] = '\0';
+	
+	// The extension specifies what programming language is being used and if
+	// it has no extension the default values for rich presence are used.
+	LanguageInfo lang_info = GetLanguageInfo(strlwr(info.extension));
+	
+	strcpy(look.large_image, lang_info.large_image);
+	ProcessFormat(look.large_text, config._large_text_format, &info, &lang_info);
+	
+	if (strcmp(lang_info.large_image, NPP_DEFAULTIMAGE) != 0)
+	{
+		strcpy(look.small_image, NPP_DEFAULTIMAGE);
+		strcpy(look.small_text, NPP_NAME);
+	}
 	UpdateRPCScintillaStatus(info);
-
-	LanguageInfo lang_info{};
-	
-	if (*info.extension)
-	{
-		lang_info = GetLanguageInfo(strlwr(info.extension));
-		sprintf(rpc.assets.large_text, "Editing a %s file", lang_info.name);
-	}
-	else
-		strcpy(rpc.assets.large_text, NPP_NAME);
-	
-	if (*info.path && config._lang_image && lang_info.large_image)
-	{
-		strcpy(rpc.assets.large_image, lang_info.large_image);
-		strcpy(rpc.assets.small_image, NPP_DEFAULTIMAGE);
-		strcpy(rpc.assets.small_text, NPP_NAME);
-	}
-	else
-		strcpy(rpc.assets.large_image, NPP_DEFAULTIMAGE);
-
-#ifdef _DEBUG
-	printf("\n-> Details: %s\n-> State: %s\n-> Large text: %s\n",
-		rpc.details, rpc.state, rpc.assets.large_text);
-#endif // _DEBUG
-
-	if (loop_while)
-	{
-		mutex.lock();
-		if (core != nullptr) // Possible null value 
-		{
-			IDiscordActivityManager* manager = core->get_activity_manager(core);
-			manager->update_activity(manager, &rpc, nullptr,
-#ifdef _DEBUG
-				[](void*, EDiscordResult result) {
-				if (result != DiscordResult_Ok)
-					printf("[RPC] Update presence | %d\n", static_cast<int>(result));
-			}
-#else
-				nullptr
-#endif // _DEBUG
-			);
-		}
-		mutex.unlock();
-	}
 }
 
 static void DiscordCoreDestroy()
 {
-	if (core != nullptr)
+	if (_core)
 	{
-		core->destroy(core);
-		core = nullptr;
+		_core->destroy(_core.get());
+		_core.release();
 	}
 }
 
+#pragma warning(disable: 4127) // while (true) const expression
+
 static DWORD WINAPI ScintillaStatus(LPVOID)
 {
-	// exit using WaitForSingleObject
 	while (true)
 	{
 		Sleep(10000);
-		FileInfo info = filedata;
-		UpdateRPCScintillaStatus(info);
+		UpdateRPCScintillaStatus(filedata);
 	}
 	return ERROR_SUCCESS;
 }
 
 static DWORD WINAPI RunCallBacks(LPVOID)
 {
+	IDiscordCore*       discord_core = nullptr;
 	DiscordCreateParams params;
 	DiscordCreateParamsSetDefault(&params);
 
 	params.client_id = config._client_id;
 	params.flags     = DiscordCreateFlags_NoRequireDiscord;
-
+	
 #ifdef _DEBUG
 	bool reconnecting = false;
 #endif // _DEBUG
 
 reconnect:
-	EDiscordResult result = DiscordCreate(DISCORD_VERSION, &params, &core);
+	EDiscordResult result = DiscordCreate(DISCORD_VERSION, &params, &discord_core);
 	if (result != DiscordResult_Ok)
 	{
 		if (result == DiscordResult_InternalError || result == DiscordResult_NotRunning)
@@ -277,9 +172,10 @@ reconnect:
 		}
 	}
 
+	_core.reset(discord_core);
 #ifdef _DEBUG
 	mutex.lock();
-	core->set_log_hook(core, DiscordLogLevel_Debug, nullptr,
+	_core->set_log_hook(_core.get(), DiscordLogLevel_Debug, nullptr,
 		[](void*, EDiscordLogLevel level, const char* message)
 	{
 		printf("[LOG] Level: %d | Message: %s\n", static_cast<int>(level), message);
@@ -292,20 +188,20 @@ reconnect:
 		printf(" > Successful reconnection!\n");
 #endif // _DEBUG
 
-	ValidateElapsedTime();
+	InitializeElapsedTime();
 
-	loop_while = true;
+	rpc_active = true;
 	UpdatePresence(filedata);
 	
-	while (loop_while)
+	while (rpc_active)
 	{
 		mutex.lock();
-		if ((result = core->run_callbacks(core)) != DiscordResult_Ok)
+		if ((result = _core->run_callbacks(_core.get())) != DiscordResult_Ok)
 		{
 #ifdef _DEBUG
 			printf("[RUN] - %d\n", static_cast<int>(result));
 #endif // _DEBUG
-			loop_while = false;
+			rpc_active = false;
 			DiscordCoreDestroy();
 			mutex.unlock();
 			goto reconnect;
@@ -348,24 +244,22 @@ static FileInfo& GetFileInfo(FileInfo& info, const TCHAR* title)
 
 		char* extension = PathFindExtensionA(info.name);
 		if (strlen(extension) != 0)
-		{
 			strncpy(info.extension, extension, MAX_PATH);
-		}
 	}
 	return info;
 }
 
 void DiscordInitPresence()
 {
-	if (thread == nullptr && config._enable)
+	if (run_callbacks == nullptr && config._enable)
 	{
-		thread = CreateThread(nullptr, 0, RunCallBacks, nullptr, 0, nullptr);
-		if (thread == nullptr)
+		run_callbacks = CreateThread(nullptr, 0, RunCallBacks, nullptr, 0, nullptr);
+		if (run_callbacks == nullptr)
 			ShowLastError();
 		else
 		{
-			monitor = CreateThread(nullptr, 0, ScintillaStatus, nullptr, 0, nullptr);
-			if (monitor == nullptr)
+			sci_status = CreateThread(nullptr, 0, ScintillaStatus, nullptr, 0, nullptr);
+			if (sci_status == nullptr)
 			{
 				ShowLastError();
 				DiscordClosePresence();
@@ -391,172 +285,61 @@ static LPTSTR GetNotepadWindowTitle(HWND hWnd)
 
 void DiscordUpdatePresence(HWND hWnd, LPARAM lParam)
 {
-	if (lParam != 0) // LPARAM from WM_SETTEXT
-		UpdatePresence(GetFileInfo(filedata, reinterpret_cast<LPCTSTR>(lParam)));
+	// lParam comes from the WM_SETTEXT message that contains the new Notepad++ window title
+	LPTSTR nppWinTitle = lParam == 0 ? GetNotepadWindowTitle(hWnd) : 
+										reinterpret_cast<LPTSTR>(lParam);
+	if (nppWinTitle == nullptr)
+		UpdatePresence(); // clean rich presence
 	else
 	{
-		LPTSTR nppWinTitle = GetNotepadWindowTitle(hWnd);
-		if (nppWinTitle != nullptr)
-			UpdatePresence(); // clean rich presence
-		else
-		{
-			UpdatePresence(GetFileInfo(filedata, nppWinTitle));
+		UpdatePresence(GetFileInfo(filedata, nppWinTitle));
+		if (lParam == 0)
 			LocalFree(nppWinTitle);
-		}
 	}
 }
 
 void DiscordClosePresence()
 {
-	if (monitor != nullptr)
+	// The thread that keeps monitoring the state of Scintilla is closed
+	if (sci_status != nullptr)
 	{
-		sci_status.lock();
-		WaitForSingleObject(monitor, 0);
-		sci_status.unlock();
-		CloseHandle(monitor);
+		mutex.lock();
+		WaitForSingleObject(sci_status, IGNORE);
+		mutex.unlock();
+		CloseHandle(sci_status);
+		sci_status = nullptr;
 	}
-	if (thread != nullptr)
+	
+	// The thread that keeps the rich presence active closes
+	if (run_callbacks != nullptr)
 	{
-		if (!loop_while) // The cooldown for reconnection is active 
+		// If the variable 'rpc_active' is false it means that the rich presence
+		// has not yet been activated or is in reconnection state
+		if (rpc_active)
 		{
-			mutex.lock();
-			WaitForSingleObject(thread, 0);
-			mutex.unlock();
+			rpc_active = false;
+			WaitForSingleObject(run_callbacks, INFINITE);
 		}
-		else // It waits until exiting the loop to finish the process 
+		else
+			WaitForSingleObject(run_callbacks, IGNORE);
+		
+		CloseHandle(run_callbacks);
+		run_callbacks = nullptr;
+		
+		mutex.lock();
+		if (_core)
 		{
-			loop_while = false;
-			WaitForSingleObject(thread, INFINITE);
-		}
-
-		CloseHandle(thread);
-		thread = nullptr;
-		if (core != nullptr)
-		{
-			auto activity_manager = core->get_activity_manager(core);
+			// The rich presence is closed and the discord core is destroyed
+			auto activity_manager = _core->get_activity_manager(_core.get());
 			activity_manager->clear_activity(activity_manager, nullptr, nullptr);
-			core->run_callbacks(core);
-
+			_core->run_callbacks(_core.get());
 			DiscordCoreDestroy();
 		}
-		
 		// The elapsed time is reset in case of a new reconnection  
 		rpc.timestamps.start = 0;
 #ifdef _DEBUG
 		printf(" > Presence has been closed\n");
 #endif // _DEBUG
+		mutex.unlock();
 	}
-}
-
-static bool ConstainsTag(const char* format, const char* tag, size_t pos)
-{
-	for (size_t i = 0; tag[i] != '\0'; i++)
-		if (format[pos] == '\0' || format[pos++] != tag[i])
-			return false;
-	return true;
-}
-
-// Returns true if the tag was found, in this case 'bpos' is incremented
-// by the number of characters written
-template<typename _Type>
-static void ProcessFormat(char* buf, const char* tag,
-	size_t& bpos, size_t& fpos, const char* type, _Type value)
-{
-	StringCchPrintfA(buf + bpos, BUFFERSIZE - bpos, type, value);
-	bpos += strlen(buf + bpos);
-	fpos += strlen(tag) - 1;
-}
-
-static char* GetDetails(char* buf, const char* format, const FileInfo& info)
-{
-	int line, column, line_count = 0;
-	HWND curScintilla = GetCurrentScintilla();
-	if (curScintilla != nullptr)
-	{
-		line_count = static_cast<int>(SendMessage(curScintilla, SCI_GETLINECOUNT, 0, 0));
-	}
-	
-	line = static_cast<int>(SendMessage(nppData._nppHandle, NPPM_GETCURRENTLINE, 0, 0)) + 1;
-	column = static_cast<int>(SendMessage(nppData._nppHandle, NPPM_GETCURRENTCOLUMN, 0, 0)) + 1;
-	
-	for (size_t i = 0, j = 0; format[i] != 0 && j < (BUFFERSIZE - 1); i++)
-	{
-		if (format[i] == '%' && format[i + 1] != '\0')
-		{
-			// format[i + 1] is '(', format[i + 2] is letter
-			switch (format[i + 2])
-			{
-			case 'f':
-				if (ConstainsTag(format, "%(file)", i))
-				{
-					ProcessFormat(buf, "%(file)", j, i, "%s", info.name);
-					continue;
-				}
-				break;
-			case 'l':
-				if (ConstainsTag(format, "%(line_count)", i))
-				{
-					ProcessFormat(buf, "%(line_count)", j, i, "%d", line_count);
-					continue;
-				}
-				else if (ConstainsTag(format, "%(line)", i))
-				{
-					ProcessFormat(buf, "%(line)", j, i, "%d", line);
-					continue;
-				}
-				break;
-			case 'c':
-				if (ConstainsTag(format, "%(column)", i))
-				{
-					ProcessFormat(buf, "%(column)", j, i, "%d", column);
-					continue;
-				}
-				break;
-			case 'e':
-				if (ConstainsTag(format, "%(extension)", i))
-				{
-					ProcessFormat(buf, "%(extension)", j, i, "%s", info.extension);
-					continue;
-				}
-				break;
-			}
-		}
-		
-		buf[j++] = format[i];
-		buf[j] = 0;
-	}
-	return buf;
-}
-
-static char* GetState(char* buf, const char* format)
-{
-	char file_size_buf[48] = { 0 };
-	HWND curScintilla = GetCurrentScintilla();
-	if (curScintilla != nullptr)
-	{
-		// The size of the file is extracted from the editor and not from the file system
-		StrFormatByteSize64A(SendMessage(curScintilla, SCI_GETLENGTH, 0, 0), 
-			file_size_buf, sizeof file_size_buf);
-	}
-
-	for (size_t i = 0, j = 0; format[i] != 0 && j < (BUFFERSIZE + 1); i++)
-	{
-		if (format[i] == '%' && format[i + 1] != '\0')
-		{
-			// format[i + 1] is '(', format[i + 2] is letter
-			switch (format[i + 2])
-			{
-			case 's':
-				if (ConstainsTag(format, "%(size)", i))
-				{
-					ProcessFormat(buf, "%(size)", j, i, "%s", file_size_buf);
-					continue;
-				}
-				break;
-			}
-		}
-		buf[j++] = format[i];
-		buf[j] = 0;
-	}
-	return buf;
 }

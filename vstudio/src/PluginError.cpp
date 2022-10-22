@@ -27,17 +27,7 @@ extern NppData nppData;
 
 #include <tchar.h>
 #include <strsafe.h>
-
-#ifndef _DEBUG
 #include <string>
-
-#ifdef UNICODE
-	typedef std::wstring String;
-#else
-	typedef std::string String;
-#endif // UNICODE
-#endif // _DEBUG
-
 
 void ShowErrorMessage(LPCTSTR message, HWND hWnd)
 {
@@ -56,13 +46,13 @@ void ShowLastError()
 	{
 		LPTSTR message = nullptr;
 		auto count = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |  FORMAT_MESSAGE_ALLOCATE_BUFFER, 
-								   nullptr, code, 0, reinterpret_cast<LPTSTR>(message), 0, nullptr);
+								   nullptr, code, 0, reinterpret_cast<LPTSTR>(&message), 0, nullptr);
 		if (count > 0 && message != nullptr)
 		{
 #ifdef _DEBUG
 			ShowErrorMessage(message);
 #else
-			String msg_format(_T("An error has occurred in the plugin. Reason:\n\n"));
+			std::basic_string<TCHAR> msg_format(_T("An error has occurred in the plugin. Reason:\n\n"));
 			ShowErrorMessage(msg_format.append(message).c_str());
 #endif // _DEBUG
 			

@@ -17,11 +17,18 @@
 
 #include <windows.h>
 
-LPWSTR GetRCStringW(unsigned ids);
-LPSTR  GetRCStringA(unsigned ids);
+#define NPP_DEFAULTIMAGE  "favicon"
 
-#ifdef UNICODE
-#define GetRCString GetRCStringW
-#else
-#define GetRCString GetRCStringA
-#endif // UNICODE
+LPTSTR GetRCString(unsigned ids);
+
+// The LanguageInfo struct contains the information of the programming
+// language that will be displayed in the rich presence, among them the
+// large image and the name of the language
+struct LanguageInfo
+{
+	const char* name;
+	const char* large_image;
+};
+
+HWND GetCurrentScintilla();
+LanguageInfo GetLanguageInfo(const char* extension);

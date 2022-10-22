@@ -20,7 +20,3 @@
 void DiscordInitPresence();
 void DiscordUpdatePresence(HWND hWnd, LPARAM lParam = 0);
 void DiscordClosePresence();
-
-
-
-

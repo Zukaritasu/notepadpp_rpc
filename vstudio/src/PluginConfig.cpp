@@ -26,6 +26,8 @@ extern NppData nppData;
 
 #pragma warning(disable: 4996) // wcscpy
 
+#define APPNAME _T("DiscordRPC")
+
 static LPTSTR GetFileNameConfig(LPTSTR buffer, int size)
 {
 	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, size, (LPARAM)buffer);
@@ -33,7 +35,41 @@ static LPTSTR GetFileNameConfig(LPTSTR buffer, int size)
 	return buffer;
 }
 
-#define APPNAME _T("DiscordRPC")
+static void ReadProperty(char buffer[128], LPCTSTR key, LPCTSTR def, LPCTSTR file)
+{
+#ifdef UNICODE
+	wchar_t value[128] = { 0 };
+	GetPrivateProfileString(APPNAME, key, def, value, 128, file);
+	WideCharToMultiByte(CP_UTF8, 0, value, -1, buffer, 128, nullptr, false);
+#else
+	GetPrivateProfileString(APPNAME, key, def, buffer, 128, file);
+#endif // UNICODE
+}
+
+static void WriteProperty(LPCTSTR key, const char* value, LPCTSTR file)
+{
+#ifdef UNICODE
+	wchar_t buf[128] = { 0 };
+	MultiByteToWideChar(CP_UTF8, 0, value, -1, buf, 128);
+	WritePrivateProfileString(APPNAME, key, buf, file);
+#else
+	WritePrivateProfileString(APPNAME, key, value, file);
+#endif // UNICODE
+}
+
+void GetDefaultConfig(PluginConfig& config)
+{
+	config._hide_details = false;
+	config._elapsed_time = true;
+	config._enable       = true;
+	config._lang_image   = true;
+	config._hide_state   = false;
+	config._client_id    = DEF_APPLICATION_ID;
+
+	strcpy(config._details_format, DEF_DETAILS_FORMAT);
+	strcpy(config._state_format, DEF_STATE_FORMAT);
+	strcpy(config._large_text_format, DEF_LARGE_TEXT_FORMAT);
+}
 
 void LoadConfig(PluginConfig& config)
 {
@@ -58,42 +94,15 @@ void LoadConfig(PluginConfig& config)
 	config._hide_state   = GetBool(_T("hideState"));
 
 	TCHAR id[19] = { 0 };
-
 	int count = GetPrivateProfileString(APPNAME, _T("clientId"), _T(DEF_APPLICATION_ID_STR), id, 19, file);
 	if (count != 18 || (config._client_id = _tstoi64(id)) < 1E17)
-		config._client_id = DEF_APPLICATION_ID;
-
-#ifndef UNICODE
-	GetPrivateProfileString(APPNAME, "detailsFormat", DEF_DETAILS_FORMAT,
-		config._details_format, 128, file);
-	GetPrivateProfileString(APPNAME, "stateFormat", DEF_STATE_FORMAT,
-		config._state_format, 128, file);
-#else
-	auto GetProperty = [&file](/*128*/char* buffer, LPCWSTR key, LPCWSTR defValue)
 	{
-		wchar_t value[128] = { 0 };
-		GetPrivateProfileString(APPNAME, key, defValue, value, 128, file);
-		if (value[0] == L'\0') // key= ?
-			wcscpy(value, defValue);
-		WideCharToMultiByte(CP_UTF8, 0, value, -1, buffer, 128, nullptr, false);
-	};
+		config._client_id = DEF_APPLICATION_ID;
+	}
 
-	GetProperty(config._details_format, L"detailsFormat", _T(DEF_DETAILS_FORMAT));
-	GetProperty(config._state_format, L"stateFormat", _T(DEF_STATE_FORMAT));
-#endif // UNICODE
-}
-
-void GetDefaultConfig(PluginConfig& config)
-{
-	config._hide_details = false;
-	config._elapsed_time = true;
-	config._enable       = true;
-	config._lang_image   = true;
-	config._hide_state   = false;
-	config._client_id    = DEF_APPLICATION_ID;
-
-	strcpy(config._details_format, DEF_DETAILS_FORMAT);
-	strcpy(config._state_format, DEF_STATE_FORMAT);
+	ReadProperty(config._details_format, _T("detailsFormat"), _T(DEF_DETAILS_FORMAT), file);
+	ReadProperty(config._state_format, _T("stateFormat"), _T(DEF_STATE_FORMAT), file);
+	ReadProperty(config._large_text_format, _T("largeTextFormat"), _T(DEF_LARGE_TEXT_FORMAT), file);
 }
 
 void SaveConfig(const PluginConfig& config)
@@ -101,7 +110,7 @@ void SaveConfig(const PluginConfig& config)
 	TCHAR file[MAX_PATH] = { 0 };
 	GetFileNameConfig(file, MAX_PATH);
 
-	auto WriteBool = [&file](LPCTSTR key, bool value) -> void
+	auto WriteBool = [&file](LPCTSTR key, bool value)
 	{
 		WritePrivateProfileString(APPNAME, key, value ? _T("1") : _T("0"), file);
 	};
@@ -116,17 +125,7 @@ void SaveConfig(const PluginConfig& config)
 	StringCbPrintf(id, sizeof(id), _T("%I64d"), config._client_id);
 	WritePrivateProfileString(APPNAME, _T("clientId"), id, file);
 	
-#ifdef UNICODE
-	wchar_t buf[128] = { 0 };
-	MultiByteToWideChar(CP_UTF8, 0, config._details_format, -1, buf, 128);
-	WritePrivateProfileString(APPNAME, L"detailsFormat", buf, file);
-
-	MultiByteToWideChar(CP_UTF8, 0, config._state_format, -1, buf, 128);
-	WritePrivateProfileString(APPNAME, L"stateFormat", buf, file);
-#else
-	WritePrivateProfileString(APPNAME, "detailsFormat", config._details_format, file);
-	WritePrivateProfileString(APPNAME, "stateFormat", config._state_format, file);
-#endif // UNICODE
-
-	
+	WriteProperty(_T("detailsFormat"), config._details_format, file);
+	WriteProperty(_T("stateFormat"), config._state_format, file);
+	WriteProperty(_T("largeTextFormat"), config._large_text_format, file);
 }

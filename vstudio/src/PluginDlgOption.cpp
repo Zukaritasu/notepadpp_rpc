@@ -13,14 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "PluginInterface.h"
 #include "PluginDlgOption.h"
-#include "PluginDefinition.h"
 #include "PluginResources.h"
 #include "PluginError.h"
 #include "PluginDiscord.h"
 #include "PluginUtil.h"
 
 #include <string>
+#include <mutex>
 #include <CommCtrl.h>
 #ifdef _DEBUG
 #include <cstdio>
@@ -28,9 +29,13 @@
 
 #pragma warning(disable: 4996)
 
-extern NppData nppData;
-extern HINSTANCE hPlugin;
+#define TEXT_BOX_EMPTY(field) \
+	"The text box for " #field " cannot be empty"
+
+extern NppData      nppData;
+extern HINSTANCE    hPlugin;
 extern PluginConfig config;
+extern std::mutex   mutex;
 
 static bool CreateTooltipInfo(HWND hWnd)
 {
@@ -75,6 +80,7 @@ static bool CreateTooltipInfo(HWND hWnd)
 	SetToolTip(IDC_DETAILS,           IDS_DETAILSTIP);
 	SetToolTip(IDC_STATE,             IDS_STATETIP);
 	SetToolTip(IDC_CREATEAPP,         IDS_CREATEAPPTIP);
+	SetToolTip(IDC_LARGETEXT,         IDS_LARGETEXTTIP);
 	
 	return true;
 }
@@ -87,7 +93,7 @@ static bool GetDiscordApplicationID(HWND hWnd, __int64& id)
 	{
 		TCHAR sclient_id[20]{};
 		GetDlgItemText(hWnd, IDC_EDIT_CID, sclient_id, 20);
-		if ((id = _ttoi64(sclient_id)) >= 1E17)
+		if ((id = _ttoi64(sclient_id)) >= MIN_CLIENT_ID)
 		{
 			return true;
 		}
@@ -148,7 +154,7 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	TCHAR* tags[] = 
 	{ 
 		_T("%(file)"), _T("%(line)"), _T("%(column)"), _T("%(size)"),
-		_T("%(line_count)"), _T("%(extension)")
+		_T("%(line_count)"), _T("%(extension)"), _T("%(lang)")
 	};
 
 	for (size_t i = 0; i < ARRAYSIZE(tags); i++)
@@ -160,12 +166,10 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	// The corresponding formats are shown in the text boxes
 	SetControlText(hWnd, IDC_DETAILS, pConfig._details_format);
 	SetControlText(hWnd, IDC_STATE, pConfig._state_format);
+	SetControlText(hWnd, IDC_LARGETEXT, pConfig._large_text_format);
 	
 	return true;
 }
-
-#define ERR_FORMAT_LONG(field) \
-	"The format length of the " #field " text field is too long, it must have a maximum of 127 characters"
 
 // Code copied from https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
 // and modified for use in this source code
@@ -241,8 +245,9 @@ static bool ProcessCommand(HWND hDlg)
 	copy._hide_details = IsButtonChecked(IDC_HIDE_DETAILS);
 
 	// The new formats are obtained but first they are validated
-	if (!GetEditTextField(hDlg, copy._details_format, GetRCStringA(IDS_DETAILSEMPTY), IDC_DETAILS, "Editing: %file") || 
-		!GetEditTextField(hDlg, copy._state_format, GetRCStringA(IDS_STATEEMPTY), IDC_STATE, "Size: %size"))
+	if (!GetEditTextField(hDlg, copy._details_format, TEXT_BOX_EMPTY(details), IDC_DETAILS, DEF_DETAILS_FORMAT) ||
+		!GetEditTextField(hDlg, copy._state_format, TEXT_BOX_EMPTY(state), IDC_STATE, DEF_STATE_FORMAT) || 
+		!GetEditTextField(hDlg, copy._large_text_format, TEXT_BOX_EMPTY(large text), IDC_LARGETEXT, DEF_LARGE_TEXT_FORMAT))
 	{
 		return false;
 	}
@@ -250,7 +255,10 @@ static bool ProcessCommand(HWND hDlg)
 	if (memcmp(&copy, &config, sizeof(PluginConfig)) != 0)
 	{
 		__int64 oldAppID = config._client_id;
+		// is locked in case Notepad++ opens a file while the configuration is being copied
+		mutex.lock();
 		memcpy(&config, &copy, sizeof(PluginConfig));
+		mutex.unlock();
 		if (!copy._enable)
 			DiscordClosePresence();
 		else
@@ -329,5 +337,3 @@ void ShowPluginDlgOption()
 		ShowLastError();
 	}
 }
-
-

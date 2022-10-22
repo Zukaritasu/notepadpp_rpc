@@ -22,7 +22,6 @@
 
 #include <CommCtrl.h>
 #include <cstdio>
-#include <mutex>
 
 #pragma warning(disable: 4100 4996)
 
@@ -41,7 +40,7 @@ NppData nppData;
 
 PluginConfig config{};
 HINSTANCE    hPlugin = nullptr;
-std::mutex   mutex;
+
 
 static LRESULT CALLBACK SubClassProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 	LPARAM lParam, UINT_PTR, DWORD_PTR)

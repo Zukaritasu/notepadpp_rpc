@@ -15,19 +15,16 @@
 
 #pragma once
 
-struct PluginConfig
+#include "PluginUtil.h"
+
+// FieInfo struct contains information on the path and name of the file,
+// including the extension. In case the file has no extension, it will
+// be classified as a text file
+struct FileInfo
 {
-	__int64 _client_id;
-	char _details_format[128];
-	char _state_format[128];
-	char _large_text_format[128];
-	bool _enable;
-	bool _hide_state;
-	bool _lang_image;
-	bool _elapsed_time;
-	bool _hide_details;
+	char  name[MAX_PATH];
+	TCHAR path[MAX_PATH];
+	char  extension[MAX_PATH];
 };
 
-void LoadConfig(PluginConfig& config);
-void GetDefaultConfig(PluginConfig& config);
-void SaveConfig(const PluginConfig& config);
+void ProcessFormat(char* buf, const char* format, const FileInfo* info, const LanguageInfo* lang = nullptr);

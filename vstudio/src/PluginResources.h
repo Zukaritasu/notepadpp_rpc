@@ -28,12 +28,13 @@
 #define IDC_VARIABLES                   1014
 #define IDC_STATE                       1015
 #define IDC_CREATEAPP                   1016
+#define IDC_LARGETEXT                   1017
 #define IDC_STATIC                      -1
 #define IDC_GROUD_ID                    -1
 
 
-#define PLUGIN_VERSION                  1,5,341,1
-#define PLUGIN_VERSION_STR              "1.5.341.1"
+#define PLUGIN_VERSION                  1,5,377,1
+#define PLUGIN_VERSION_STR              "1.5.377.1"
 
 #define PLUGIN_ABOUT \
 	TEXT("Discord Rich Presence by Zukaritasu\n\nVersion " PLUGIN_VERSION_STR "\n\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")
@@ -42,6 +43,7 @@
 
 #define DEF_DETAILS_FORMAT              "Editing: %(file)"
 #define DEF_STATE_FORMAT                "Size: %(size)"
+#define DEF_LARGE_TEXT_FORMAT           "Editing a %(lang) file"
 #define DEF_APPLICATION_ID_STR          "938157386068279366"
 #define DEF_APPLICATION_ID              938157386068279366
 
@@ -59,7 +61,6 @@
 #define IDS_DETAILSTIP                  110
 #define IDS_STATETIP                    111
 #define IDS_CREATEAPPTIP                112
-#define IDS_DETAILSEMPTY                113
-#define IDS_STATEEMPTY                  114
-#define IDS_ANCIICHARS                  115
-#define IDS_INVALIDID                   116
+#define IDS_ANCIICHARS                  113
+#define IDS_INVALIDID                   114
+#define IDS_LARGETEXTTIP                115
