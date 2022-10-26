@@ -51,7 +51,7 @@ namespace
 	HANDLE          run_callbacks  = nullptr; 
 	// Updates the rich presence every so often by
 	// changes in the editor, including the number of lines in the file
-	HANDLE          sci_status     = nullptr;  
+	HANDLE          sci_status     = nullptr;
 	volatile bool   rpc_active     = false;
 }
 
@@ -66,12 +66,31 @@ static void InitializeElapsedTime()
 	}
 }
 
-static void UpdateRPCScintillaStatus(const FileInfo& info)
+static void UpdateLookRichPresence(DiscordActivityAssets& look, FileInfo& info)
+{
+	look.small_image[0] = look.small_text[0] = look.large_text[0] = look.large_image[0] = '\0';
+	if (info.name[0] != '\0')
+	{
+		LanguageInfo lang_info = GetLanguageInfo(strlwr(info.extension));
+		strcpy(look.large_image, lang_info.large_image);
+		ProcessFormat(look.large_text, config._large_text_format, &info, &lang_info);
+		if (strcmp(lang_info.large_image, NPP_DEFAULTIMAGE) != 0)
+		{
+			strcpy(look.small_image, NPP_DEFAULTIMAGE);
+			strcpy(look.small_text, NPP_NAME);
+		}
+	}
+}
+
+static void UpdatePresence(FileInfo info = FileInfo(), bool updateLook = true)
 {
 	mutex.lock();
+	InitializeElapsedTime();
 	
 	rpc.details[0] = rpc.state[0] = '\0';
-	if (*info.name && _core)
+	if (updateLook)
+		UpdateLookRichPresence(rpc.assets, info);
+	if (info.name[0] != '\0')
 	{
 		if (!config._hide_details)
 			ProcessFormat(rpc.details, config._details_format, &info);
@@ -80,7 +99,10 @@ static void UpdateRPCScintillaStatus(const FileInfo& info)
 #ifdef _DEBUG
 		printf("\n\n Updating...\n - %s\n - %s\n - %s\n", rpc.details, rpc.state, rpc.assets.large_text);
 #endif // _DEBUG
-
+	}
+	
+	if (_core)
+	{
 		IDiscordActivityManager* manager = _core->get_activity_manager(_core.get());
 		manager->update_activity(manager, &rpc, nullptr,
 #ifdef _DEBUG
@@ -93,29 +115,8 @@ static void UpdateRPCScintillaStatus(const FileInfo& info)
 #endif // _DEBUG
 			);
 	}
-	mutex.unlock();
-}
 
-static void UpdatePresence(FileInfo info = FileInfo())
-{
-	InitializeElapsedTime();
-	
-	auto& look = rpc.assets;
-	look.small_image[0] = look.small_text[0] = '\0';
-	
-	// The extension specifies what programming language is being used and if
-	// it has no extension the default values for rich presence are used.
-	LanguageInfo lang_info = GetLanguageInfo(strlwr(info.extension));
-	
-	strcpy(look.large_image, lang_info.large_image);
-	ProcessFormat(look.large_text, config._large_text_format, &info, &lang_info);
-	
-	if (strcmp(lang_info.large_image, NPP_DEFAULTIMAGE) != 0)
-	{
-		strcpy(look.small_image, NPP_DEFAULTIMAGE);
-		strcpy(look.small_text, NPP_NAME);
-	}
-	UpdateRPCScintillaStatus(info);
+	mutex.unlock();
 }
 
 static void DiscordCoreDestroy()
@@ -134,7 +135,7 @@ static DWORD WINAPI ScintillaStatus(LPVOID)
 	while (true)
 	{
 		Sleep(10000);
-		UpdateRPCScintillaStatus(filedata);
+		UpdatePresence(filedata, false);
 	}
 	return ERROR_SUCCESS;
 }
