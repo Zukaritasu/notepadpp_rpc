@@ -37,6 +37,48 @@ static ScintillaStatus status[] =
 	{ "%(size)" }, { "%(line_count)" }, { "%(lang)" }
 };
 
+class StringBuilder
+{
+private:
+	int _length;
+	int _count;
+	char* _buf;
+
+public:
+	StringBuilder(char* buf, int length)
+	{
+		_buf = buf;
+		_length = length;
+		_count = 0;
+	}
+	
+	void Append(const std::string& str)
+	{
+		for (char c : str)
+		{
+			Append(c);
+			if (IsFull())
+			{
+				break;
+			}
+		}
+	}
+	
+	void Append(char c)
+	{
+		if ((_count + 2) < _length)
+		{
+			_buf[_count++] = c;
+			_buf[_count  ] = '\0';
+		}
+	}
+	
+	bool IsFull()
+	{
+		return _count == _length;
+	}
+};
+
 extern NppData nppData;
 
 static void LoadScintillaStatus(const FileInfo* info, const LanguageInfo* lang)
@@ -65,22 +107,14 @@ static bool ConstainsTag(const char* format, const char* tag, size_t pos)
 	return true;
 }
 
-static void AppendString(char* buf, const char* tag, size_t& bpos, size_t& fpos, const std::string& value)
-{
-	if ((BUFFERSIZE - bpos) > 0)
-	{
-		StringCchPrintfA(buf + bpos, BUFFERSIZE - bpos, "%s", value.c_str());
-		bpos += strlen(buf + bpos);
-		fpos += strlen(tag) - 1;
-	}
-}
-
 void ProcessFormat(char* buf, const char* format, const FileInfo* info, const LanguageInfo* lang)
 {
 	LoadScintillaStatus(info, lang);
 	
+	StringBuilder builder(buf, BUFFERSIZE);
 	bool _continue;
-	for (size_t i = 0, j = 0; format[i] != '\0' && j < (BUFFERSIZE - 1); i++)
+
+	for (size_t i = 0; format[i] != '\0' && !builder.IsFull(); i++)
 	{
 		_continue = false;
 		if (format[i] == '%' && format[i + 1] == '(' && format[i + 2] != '\0')
@@ -89,7 +123,8 @@ void ProcessFormat(char* buf, const char* format, const FileInfo* info, const La
 			{
 				if (format[i + 2] == status[k].key[2] && ConstainsTag(format, status[k].key.c_str(), i))
 				{
-					AppendString(buf, status[k].key.c_str(), j, i, status[k].value);
+					builder.Append(status[k].value);
+					i += status[k].key.length() - 1;
 					_continue = true;
 					break;
 				}
@@ -97,8 +132,7 @@ void ProcessFormat(char* buf, const char* format, const FileInfo* info, const La
 		}
 
 		if (_continue) continue;
-
-		buf[j++] = format[i];
-		buf[j] = 0;
+		
+		builder.Append(format[i]);
 	}
 }
