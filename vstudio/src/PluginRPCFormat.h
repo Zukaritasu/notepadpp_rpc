@@ -23,7 +23,6 @@
 struct FileInfo
 {
 	char  name[MAX_PATH];
-	TCHAR path[MAX_PATH];
 	char  extension[MAX_PATH];
 };
 

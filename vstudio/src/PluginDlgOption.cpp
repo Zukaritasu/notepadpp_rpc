@@ -268,7 +268,7 @@ static bool ProcessCommand(HWND hDlg)
 			if (oldAppID != client_id)
 				DiscordClosePresence();
 
-			DiscordUpdatePresence(nppData._nppHandle);
+			DiscordUpdatePresence();
 			DiscordInitPresence();
 		}
 

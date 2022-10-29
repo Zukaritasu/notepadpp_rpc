@@ -18,5 +18,5 @@
 #include <Windows.h>
 
 void DiscordInitPresence();
-void DiscordUpdatePresence(HWND hWnd, LPARAM lParam = 0);
+void DiscordUpdatePresence();
 void DiscordClosePresence();

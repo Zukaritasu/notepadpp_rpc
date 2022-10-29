@@ -42,8 +42,6 @@ std::mutex          mutex;
 
 namespace 
 {
-	// current file information
-	FileInfo        filedata{}; 
 	// the rich presence of the current file
 	DiscordActivity rpc{};
 	std::unique_ptr<IDiscordCore> _core;
@@ -53,6 +51,19 @@ namespace
 	// changes in the editor, including the number of lines in the file
 	HANDLE          sci_status     = nullptr;
 	volatile bool   rpc_active     = false;
+}
+
+// Size buffer (MAX_PATH)
+static void GetEditorProperty(char* buf, int prop)
+{
+	buf[0] = '\0';
+#ifndef UNICODE
+	SNDMSG(nppData._nppHandle, prop, MAX_PATH, reinterpret_cast<LPARAM>(buf));
+#else
+	wchar_t buffer[MAX_PATH] = { L'\0' };
+	SNDMSG(nppData._nppHandle, prop, MAX_PATH, reinterpret_cast<LPARAM>(buffer));
+	WideCharToMultiByte(CP_UTF8, 0, buffer, -1, buf, MAX_PATH, nullptr, FALSE);
+#endif // UNICODE
 }
 
 static void InitializeElapsedTime()
@@ -69,11 +80,24 @@ static void InitializeElapsedTime()
 static void UpdateLookRichPresence(DiscordActivityAssets& look, FileInfo& info)
 {
 	look.small_image[0] = look.small_text[0] = look.large_text[0] = look.large_image[0] = '\0';
-	if (info.name[0] != '\0')
+	
+	// The default large image is used
+	if (!config._lang_image)
+	{
+		strcpy(look.large_image, NPP_DEFAULTIMAGE);
+		strcpy(look.large_text, NPP_NAME);
+	}
+	// When Notepad++ starts, the title of the window is "Notepad++", that means
+	// that a file is not yet open or Scintilla has not yet been started with a
+	// default file, in that case it cannot continue
+	else if (info.name[0] != '\0')
 	{
 		LanguageInfo lang_info = GetLanguageInfo(strlwr(info.extension));
 		strcpy(look.large_image, lang_info.large_image);
 		ProcessFormat(look.large_text, config._large_text_format, &info, &lang_info);
+		
+		// If the language is the default, the large image is left and the
+		// small image is not established.
 		if (strcmp(lang_info.large_image, NPP_DEFAULTIMAGE) != 0)
 		{
 			strcpy(look.small_image, NPP_DEFAULTIMAGE);
@@ -82,9 +106,14 @@ static void UpdateLookRichPresence(DiscordActivityAssets& look, FileInfo& info)
 	}
 }
 
-static void UpdatePresence(FileInfo info = FileInfo(), bool updateLook = true)
+static void DiscordUpdatePresence(bool updateLook)
 {
+	FileInfo info;
+	GetEditorProperty(info.name, NPPM_GETFILENAME); /* filename */
+	GetEditorProperty(info.extension, NPPM_GETEXTPART); /* extension */
+	
 	mutex.lock();
+	
 	InitializeElapsedTime();
 	
 	rpc.details[0] = rpc.state[0] = '\0';
@@ -119,6 +148,11 @@ static void UpdatePresence(FileInfo info = FileInfo(), bool updateLook = true)
 	mutex.unlock();
 }
 
+void DiscordUpdatePresence()
+{
+	DiscordUpdatePresence(true);
+}
+
 static void DiscordCoreDestroy()
 {
 	if (_core)
@@ -135,7 +169,7 @@ static DWORD WINAPI ScintillaStatus(LPVOID)
 	while (true)
 	{
 		Sleep(10000);
-		UpdatePresence(filedata, false);
+		DiscordUpdatePresence(false);
 	}
 	return ERROR_SUCCESS;
 }
@@ -192,7 +226,7 @@ reconnect:
 	InitializeElapsedTime();
 
 	rpc_active = true;
-	UpdatePresence(filedata);
+	DiscordUpdatePresence(true);
 	
 	while (rpc_active)
 	{
@@ -214,42 +248,6 @@ reconnect:
 	return DiscordResult_Ok;
 }
 
-static FileInfo& GetFileInfo(FileInfo& info, const TCHAR* title)
-{
-	ZeroMemory(&info, sizeof(FileInfo));
-	// The prefix indicating save changes
-	int       start = title[0] == '*' ? 1 : 0;
-	const int end = lstrlen(title) - (sizeof(" - Notepad++") - 1);
-
-	int i = 0;
-	while (start < end)
-		info.path[i++] = title[start++];
-	info.path[i] = '\0';
-
-#ifdef UNICODE
-	char path[MAX_PATH * 2];
-	const int cbytes = WideCharToMultiByte(CP_UTF8, 0, info.path, -1,
-					   path, sizeof(path), nullptr, FALSE);
-	if (cbytes == 0)
-	{
-		ShowLastError();
-		return info;
-	}
-#else
-	const char* path = data._path;
-#endif // UNICODE
-
-	if (*path)
-	{
-		strcpy(info.name, PathFindFileNameA(path));
-
-		char* extension = PathFindExtensionA(info.name);
-		if (strlen(extension) != 0)
-			strncpy(info.extension, extension, MAX_PATH);
-	}
-	return info;
-}
-
 void DiscordInitPresence()
 {
 	if (run_callbacks == nullptr && config._enable)
@@ -269,43 +267,14 @@ void DiscordInitPresence()
 	}
 }
 
-static LPTSTR GetNotepadWindowTitle(HWND hWnd)
-{
-	TCHAR* buffer = nullptr;
-	int length = GetWindowTextLength(hWnd);
-	if (length > 0)
-	{
-		buffer = (TCHAR*)LocalAlloc(LPTR, sizeof(TCHAR) * (++length));
-		if (buffer != nullptr)
-			GetWindowText(hWnd, buffer, length);
-		else
-			ShowLastError();
-	}
-	return buffer;
-}
-
-void DiscordUpdatePresence(HWND hWnd, LPARAM lParam)
-{
-	// lParam comes from the WM_SETTEXT message that contains the new Notepad++ window title
-	LPTSTR nppWinTitle = lParam == 0 ? GetNotepadWindowTitle(hWnd) : 
-										reinterpret_cast<LPTSTR>(lParam);
-	if (nppWinTitle == nullptr)
-		UpdatePresence(); // clean rich presence
-	else
-	{
-		UpdatePresence(GetFileInfo(filedata, nppWinTitle));
-		if (lParam == 0)
-			LocalFree(nppWinTitle);
-	}
-}
-
 void DiscordClosePresence()
 {
 	// The thread that keeps monitoring the state of Scintilla is closed
 	if (sci_status != nullptr)
 	{
 		mutex.lock();
-		WaitForSingleObject(sci_status, IGNORE);
+		WaitForSingleObject(sci_status, 0);
+		TerminateThread(sci_status, EXIT_SUCCESS);
 		mutex.unlock();
 		CloseHandle(sci_status);
 		sci_status = nullptr;
@@ -322,7 +291,7 @@ void DiscordClosePresence()
 			WaitForSingleObject(run_callbacks, INFINITE);
 		}
 		else
-			WaitForSingleObject(run_callbacks, IGNORE);
+			WaitForSingleObject(run_callbacks, 0);
 		
 		CloseHandle(run_callbacks);
 		run_callbacks = nullptr;

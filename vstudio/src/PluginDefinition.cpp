@@ -48,7 +48,7 @@ static LRESULT CALLBACK SubClassProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 	switch (uMsg) 
 	{
 	case WM_SETTEXT:
-		DiscordUpdatePresence(hWnd, lParam);
+		DiscordUpdatePresence();
 		break;
 	case WM_CLOSE:
 		DiscordClosePresence();
