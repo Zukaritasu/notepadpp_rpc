@@ -17,17 +17,21 @@ And paste the content into that folder. If you had Notepad++ open then you shoul
 
 ![](./sample_rpc.png)
 
+```The plugin is available on the official Notepad++ plugin list. You can install it from the plugin manager by entering "Discord Rich Presence" in "search".```
+
 ## Support
 If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/xEtAtmU6 and go to the **#npp-support** channel and leave your question with the following information:
 
+```
 * What version of Windows do you have?
 * 32 or 64 bits architecture?
 * The version of Notepad++ you have
 * The DiscordRPC plugin version
+```
 
 ## Documentation
 
-* [Create custom rich presence](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
+* [Create Custom Rich Presence](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
 
 ## Discord SDK Information
 
