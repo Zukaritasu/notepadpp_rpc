@@ -24,3 +24,14 @@
 	  now the respective name of the language "Editing a C++ file" is shown
 	- Added support for Windows resource files, now it shows as
 	  "Editing a RESOURCE file"
+[Version 1.5]
+	In this new version you can now have an even more customized
+	presence with the ease of modifying "details", "state" and
+	"large text" using tags. Using the variables or tags found in the
+	drop-down list in the options window, you can modify how the file
+	type is displayed, in uppercase "PYTHON", lowercase "python" or
+	PascalCase "Python"
+	Other improvements:
+	- Added a link in the options window to create an application
+	- Bugs were found in the source code and resolved
+	- Added a documentation in the repository to create an application
