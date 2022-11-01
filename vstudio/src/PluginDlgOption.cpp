@@ -154,7 +154,8 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	TCHAR* tags[] = 
 	{ 
 		_T("%(file)"), _T("%(line)"), _T("%(column)"), _T("%(size)"),
-		_T("%(line_count)"), _T("%(extension)"), _T("%(lang)")
+		_T("%(line_count)"), _T("%(extension)"), _T("%(lang)"), _T("%(Lang)"),
+		_T("%(LANG)")
 	};
 
 	for (size_t i = 0; i < ARRAYSIZE(tags); i++)
