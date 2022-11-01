@@ -1,4 +1,4 @@
-# How to contribute images
+# How to Contribute Images
 
 The images or logos of the programming languages that are shown in the presence can be edited or modified. To contribute with the images (modifying or adding) you can make a fork and then a pull request to later discuss the changes. 
 
