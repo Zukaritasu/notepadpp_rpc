@@ -77,7 +77,7 @@ static void InitializeElapsedTime()
 	}
 }
 
-static void UpdateLookRichPresence(DiscordActivityAssets& look, FileInfo& info)
+static void UpdateLookRichPresence(DiscordActivityAssets& look, FileInfo& info, LanguageInfo& lang_info)
 {
 	look.small_image[0] = look.small_text[0] = look.large_text[0] = look.large_image[0] = '\0';
 	
@@ -92,10 +92,8 @@ static void UpdateLookRichPresence(DiscordActivityAssets& look, FileInfo& info)
 	// default file, in that case it cannot continue
 	else if (info.name[0] != '\0')
 	{
-		LanguageInfo lang_info = GetLanguageInfo(strlwr(info.extension));
 		strcpy(look.large_image, lang_info.large_image);
 		ProcessFormat(look.large_text, config._large_text_format, &info, &lang_info);
-		
 		// If the language is the default, the large image is left and the
 		// small image is not established.
 		if (strcmp(lang_info.large_image, NPP_DEFAULTIMAGE) != 0)
@@ -117,14 +115,16 @@ static void DiscordUpdatePresence(bool updateLook)
 	InitializeElapsedTime();
 	
 	rpc.details[0] = rpc.state[0] = '\0';
+	
+	LanguageInfo lang_info = GetLanguageInfo(strlwr(info.extension));
 	if (updateLook)
-		UpdateLookRichPresence(rpc.assets, info);
+		UpdateLookRichPresence(rpc.assets, info, lang_info);
 	if (info.name[0] != '\0')
 	{
 		if (!config._hide_details)
-			ProcessFormat(rpc.details, config._details_format, &info);
+			ProcessFormat(rpc.details, config._details_format, &info, &lang_info);
 		if (!config._hide_state)
-			ProcessFormat(rpc.state, config._state_format, &info);
+			ProcessFormat(rpc.state, config._state_format, &info, &lang_info);
 #ifdef _DEBUG
 		printf("\n\n Updating...\n - %s\n - %s\n - %s\n", rpc.details, rpc.state, rpc.assets.large_text);
 #endif // _DEBUG
