@@ -17,7 +17,7 @@ And paste the content into that folder. If you had Notepad++ open then you shoul
 
 ![](./sample_rpc.png)
 
-*The plugin is available on the official Notepad++ plugin list. You can install it from the plugin manager by entering "Discord Rich Presence" in "search".*
+*The plugin is available on [The official collection of Notepad++ plugins](https://github.com/notepad-plus-plus/nppPluginList). You can install it from the plugin manager by entering "Discord Rich Presence" in "search".*
 
 ## Support
 If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/xEtAtmU6 and go to the **#npp-support** channel and leave your question with the following information:
