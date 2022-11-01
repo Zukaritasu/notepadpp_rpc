@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <Shlwapi.h>
 #include <assert.h>
+#include <cctype>
 
 #define BUFFERSIZE sizeof(DiscordActivity::details)
 
@@ -34,7 +35,8 @@ struct ScintillaStatus
 static ScintillaStatus status[] =
 {
 	{ "%(file)" }, { "%(extension)" } , { "%(line)" }, { "%(column)" }, 
-	{ "%(size)" }, { "%(line_count)" }, { "%(lang)" }
+	{ "%(size)" }, { "%(line_count)" }, { "%(lang)" }, { "%(Lang)" },
+	{ "%(LANG)" }
 };
 
 class StringBuilder
@@ -83,7 +85,7 @@ extern NppData nppData;
 
 static void LoadScintillaStatus(const FileInfo* info, const LanguageInfo* lang)
 {
-	assert(info != nullptr);
+	assert(info != nullptr && lang != nullptr);
 	
 	status[0].value = info->name;
 	status[1].value = info->extension;
@@ -96,7 +98,21 @@ static void LoadScintillaStatus(const FileInfo* info, const LanguageInfo* lang)
 	StrFormatByteSize64A(SNDMSG(hWnd, SCI_GETLENGTH, 0, 0), file_size_buf, 48);
 	status[4].value = file_size_buf;
 	status[5].value = std::to_string((int)SNDMSG(hWnd, SCI_GETLINECOUNT, 0, 0) + 1);
-	status[6].value = lang != nullptr ? lang->name : "";
+	
+	// true = upper false = lower
+	static auto GetStringCase = [](std::string& s, bool case_) -> std::string&
+	{
+		for (char& c : s) c = case_ ? (char)std::toupper(c) : (char)std::tolower(c);
+		return s;
+	};
+	
+	std::string lang_name = lang->name;
+	
+	status[6].value = GetStringCase(lang_name, false); // lower case
+	
+	lang_name[0]    = (char)std::toupper(lang_name[0]);
+	status[7].value = lang_name; // first letter in upper case
+	status[8].value = GetStringCase(lang_name, true); // upper case
 }
 
 static bool ConstainsTag(const char* format, const char* tag, size_t pos)
