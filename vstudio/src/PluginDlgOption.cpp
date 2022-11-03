@@ -81,6 +81,7 @@ static bool CreateTooltipInfo(HWND hWnd)
 	SetToolTip(IDC_STATE,             IDS_STATETIP);
 	SetToolTip(IDC_CREATEAPP,         IDS_CREATEAPPTIP);
 	SetToolTip(IDC_LARGETEXT,         IDS_LARGETEXTTIP);
+	SetToolTip(IDC_DOC_HELP,          IDS_DOC_HELP);
 	
 	return true;
 }
@@ -291,14 +292,13 @@ static INT_PTR CALLBACK OptionsProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 	case WM_NOTIFY:
 	{
 		LPNMHDR notify = reinterpret_cast<LPNMHDR>(lParam);
-		if (notify->idFrom == IDC_CREATEAPP)
+		if (notify->idFrom == IDC_CREATEAPP || notify->idFrom == IDC_DOC_HELP)
 		{
 			switch (notify->code)
 			{
 			case NM_CLICK:
 			case NM_RETURN:
 				{
-					// The page to create a new discord application opens
 					NMLINK* link = (NMLINK*)notify;
 					ShellExecute(NULL, L"open", link->item.szUrl, NULL, NULL, SW_SHOW);
 					return TRUE;
