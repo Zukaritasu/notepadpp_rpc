@@ -38,8 +38,8 @@
     <ClInclude Include="..\src\PluginDlgOption.h" />
     <ClInclude Include="..\src\PluginError.h" />
     <ClInclude Include="..\src\PluginDiscord.h" />
-	<ClInclude Include="..\src\PluginUtil.h" />
-	<ClInclude Include="..\src\PluginRPCFormat.h" />
+    <ClInclude Include="..\src\PluginUtil.h" />
+    <ClInclude Include="..\src\PluginRPCFormat.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NppPluginDemo.cpp" />
@@ -48,8 +48,8 @@
     <ClCompile Include="..\src\PluginDlgOption.cpp" />
     <ClCompile Include="..\src\PluginError.cpp" />
     <ClCompile Include="..\src\PluginDiscord.cpp" />
-	<ClCompile Include="..\src\PluginUtil.cpp" />
-	<ClCompile Include="..\src\PluginRPCFormat.cpp" />
+    <ClCompile Include="..\src\PluginUtil.cpp" />
+    <ClCompile Include="..\src\PluginRPCFormat.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\PluginResources.rc" />
@@ -125,6 +125,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>DiscordRPC</TargetName>
+    <OutDir>..\..\..\..\Notepad++\plugins\DiscordRPC</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
