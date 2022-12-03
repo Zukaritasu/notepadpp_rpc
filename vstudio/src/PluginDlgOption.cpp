@@ -23,6 +23,8 @@
 #include <string>
 #include <mutex>
 #include <CommCtrl.h>
+#include <limits.h>
+#include <errno.h>
 #ifdef _DEBUG
 #include <cstdio>
 #endif // _DEBUG
@@ -86,23 +88,26 @@ static bool CreateTooltipInfo(HWND hWnd)
 	return true;
 }
 
-static bool GetDiscordApplicationID(HWND hWnd, __int64& id)
+static bool GetDiscordApplicationID(HWND hWnd, __int64& client_id)
 {
 	int length = GetWindowTextLength(GetDlgItem(hWnd, IDC_EDIT_CID));
-	// The number of digits of the ID must be 18
-	if (length == 18)
+	if (length >= 18)
 	{
-		TCHAR sclient_id[20]{};
-		GetDlgItemText(hWnd, IDC_EDIT_CID, sclient_id, 20);
-		if ((id = _ttoi64(sclient_id)) >= MIN_CLIENT_ID)
+		TCHAR sclient_id[48] = { '\0' };
+		GetDlgItemText(hWnd, IDC_EDIT_CID, sclient_id, 48);
+		errno = 0;
+		client_id = _tcstoll(sclient_id, nullptr, 10);
+		if (errno == ERANGE) // the number is very large
 		{
+			ShowErrorMessage(_T("The application ID is a very large number. Enter a valid ID"), hWnd);
+			return false;
+		} else if (id_long >= MIN_CLIENT_ID)
 			return true;
-		}
 	}
 	else if (length == 0)
 	{
 		// The number of digits is invalid, the default ID is assigned
-		id = DEF_APPLICATION_ID;
+		client_id = DEF_APPLICATION_ID;
 		return true;
 	}
 
@@ -136,8 +141,8 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	if (number != _T(DEF_APPLICATION_ID_STR))
 		SendDlgItemMessage(hWnd, IDC_EDIT_CID, WM_SETTEXT, 0, (LPARAM)number.c_str());
 	
-	// Maximum 18 digits
-	SendDlgItemMessage(hWnd, IDC_EDIT_CID, EM_SETLIMITTEXT, 18, 0);
+	// Maximum 19 digits
+	SendDlgItemMessage(hWnd, IDC_EDIT_CID, EM_SETLIMITTEXT, 19, 0);
 
 	auto SetButtonCheck = [&hWnd](unsigned id, bool check)
 	{
