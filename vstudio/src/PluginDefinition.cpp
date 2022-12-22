@@ -15,62 +15,26 @@
 
 #include "PluginDefinition.h"
 #include "PluginResources.h"
-#include "PluginConfig.h"
 #include "PluginDlgOption.h"
 #include "PluginDiscord.h"
-#include "PluginError.h"
 
-#include <CommCtrl.h>
+#ifdef _DEBUG
 #include <cstdio>
+#endif // _DEBUG
 
 #pragma warning(disable: 4100 4996)
 
-// ==================================================================
-// TEMPLATE VARIABLES
-// ==================================================================
+FuncItem     funcItem[nbFunc];
+NppData      nppData;
 
-FuncItem funcItem[nbFunc];
-
-NppData nppData;
-
-// ==================================================================
-// PLUGIN VARIABLES
-// ==================================================================
-
-
+RichPresence rpc;
 PluginConfig config{};
 HINSTANCE    hPlugin = nullptr;
-
-
-static LRESULT CALLBACK SubClassProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
-	LPARAM lParam, UINT_PTR, DWORD_PTR)
-{
-	switch (uMsg) 
-	{
-	case WM_SETTEXT:
-		DiscordUpdatePresence();
-		break;
-	case WM_CLOSE:
-		DiscordClosePresence();
-		break;
-	}
-
-	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-}
-
-// ==================================================================
-// IMPLEMENTATION OF TEMPLATE FUNCTIONS 
-// ==================================================================
-
-#define ID_SUB_CLSPROC 1560
 
 void commandMenuInit()
 {
 	LoadConfig(config);
-	DiscordInitPresence();
-
-	SetWindowSubclass(nppData._nppHandle, SubClassProc,
-		ID_SUB_CLSPROC, 0);
+	rpc.Init();
 
 	setCommand(0, _T("Options"), OptionsPlugin);
 	setCommand(1, nullptr,       nullptr);
@@ -79,8 +43,7 @@ void commandMenuInit()
 
 void commandMenuCleanUp()
 {
-	RemoveWindowSubclass(nppData._nppHandle, SubClassProc,
-		ID_SUB_CLSPROC);
+	rpc.Close();
 }
 
 void pluginInit(HANDLE handle)
@@ -94,10 +57,7 @@ void pluginInit(HANDLE handle)
 	hPlugin = reinterpret_cast<HINSTANCE>(handle);
 }
 
-void pluginCleanUp()
-{
-	DiscordClosePresence();
-}
+void pluginCleanUp() {}
 
 bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
 				ShortcutKey *sk, bool check0nInit)
@@ -116,14 +76,23 @@ bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
     return true;
 }
 
-// ==================================================================
-// IMPLEMENTATION OF PLUGIN FUNCTIONS 
-// ==================================================================
-
 void About()
 {
 	MessageBox(nppData._nppHandle, PLUGIN_ABOUT, TITLE_MBOX_DRPC,
 			   MB_ICONINFORMATION | MB_OK);
+}
+
+void ScintillaNotify(SCNotification* notifyCode)
+{
+
+	switch (notifyCode->nmhdr.code)
+	{
+	case NPPN_BUFFERACTIVATED:
+	case NPPN_FILERENAMED:
+		rpc.Update();
+	default:
+		break;
+	}
 }
 
 void OptionsPlugin()

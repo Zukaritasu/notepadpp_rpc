@@ -15,12 +15,16 @@
 
 #pragma once
 
+#include <stdlib.h>
+
+#define MAX_FORMAT_BUF 128
+
 struct PluginConfig
 {
 	__int64 _client_id;
-	char _details_format[128];
-	char _state_format[128];
-	char _large_text_format[128];
+	char _details_format[MAX_FORMAT_BUF];
+	char _state_format[MAX_FORMAT_BUF];
+	char _large_text_format[MAX_FORMAT_BUF];
 	bool _enable;
 	bool _hide_state;
 	bool _lang_image;

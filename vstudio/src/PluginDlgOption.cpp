@@ -19,12 +19,14 @@
 #include "PluginError.h"
 #include "PluginDiscord.h"
 #include "PluginUtil.h"
+#include "PluginThread.h"
 
 #include <string>
 #include <mutex>
 #include <CommCtrl.h>
 #include <limits.h>
 #include <errno.h>
+#include <tchar.h>
 #ifdef _DEBUG
 #include <cstdio>
 #endif // _DEBUG
@@ -37,20 +39,29 @@
 extern NppData      nppData;
 extern HINSTANCE    hPlugin;
 extern PluginConfig config;
-extern std::mutex   mutex;
+
+#ifdef __MINGW32__
+#define TTS_USEVISUALSTYLE 0x100
+#define TTM_SETMAXTIPWIDTH WM_USER + 24
+#endif
+
+#ifndef ARRAYSIZE
+#define ARRAYSIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#endif
 
 static bool CreateTooltipInfo(HWND hWnd)
 {
 	// A tooltip is created to assign it to each component or option window
 	// control that requires it
-	HWND toolTip = CreateWindow(TOOLTIPS_CLASS,
-								nullptr,
-								TTS_ALWAYSTIP | TTS_NOPREFIX | TTS_USEVISUALSTYLE | WS_POPUP,
-								0, 0, 0, 0,
-								hWnd,
-								(HMENU)0,
-								nullptr,
-								nullptr);
+	HWND toolTip = CreateWindowEx(0, TOOLTIPS_CLASS,
+								  nullptr,
+								  TTS_ALWAYSTIP | TTS_NOPREFIX | TTS_USEVISUALSTYLE | WS_POPUP,
+								  0, 0, 0, 0,
+								  hWnd,
+								  (HMENU)0,
+								  nullptr,
+								  nullptr);
+
 	if (toolTip == nullptr)
 		return false;	// Failed to create tooltip
 	
@@ -96,12 +107,12 @@ static bool GetDiscordApplicationID(HWND hWnd, __int64& client_id)
 		TCHAR sclient_id[48] = { '\0' };
 		GetDlgItemText(hWnd, IDC_EDIT_CID, sclient_id, 48);
 		errno = 0;
-		client_id = _tcstoll(sclient_id, nullptr, 10);
+		client_id = _ttoi64(sclient_id);
 		if (errno == ERANGE) // the number is very large
 		{
 			ShowErrorMessage(_T("The application ID is a very large number. Enter a valid ID"), hWnd);
 			return false;
-		} else if (id_long >= MIN_CLIENT_ID)
+		} else if (client_id >= MIN_CLIENT_ID)
 			return true;
 	}
 	else if (length == 0)
@@ -120,9 +131,9 @@ static void SetControlText(HWND hWnd, unsigned id, const char* text)
 #ifdef UNICODE
 	wchar_t buf[128] = { 0 };
 	MultiByteToWideChar(CP_UTF8, 0, text, -1, buf, 128);
-	SetDlgItemText(hWnd, id, buf);
+	SetDlgItemTextW(hWnd, id, buf);
 #else
-	SetDlgItemText(hWnd, id, text);
+	SetDlgItemTextA(hWnd, id, text);
 #endif // UNICODE
 }
 
@@ -133,13 +144,12 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 
 	// The ID is converted to a string and if the ID is equal to the default ID,
 	// the text box will be empty
-#ifdef UNICODE
-	std::wstring number = std::to_wstring(pConfig._client_id);
-#else
-	std::string number = std::to_string(pConfig._client_id);
-#endif // UNICODE
-	if (number != _T(DEF_APPLICATION_ID_STR))
-		SendDlgItemMessage(hWnd, IDC_EDIT_CID, WM_SETTEXT, 0, (LPARAM)number.c_str());
+	TCHAR number[48] = { '\0' };
+	_stprintf(number, _T("%I64d"), pConfig._client_id);
+	if (_tcscmp(number, _T(DEF_APPLICATION_ID_STR)) != 0)
+	{
+		SendDlgItemMessage(hWnd, IDC_EDIT_CID, WM_SETTEXT, 0, (LPARAM)number);
+	}
 	
 	// Maximum 19 digits
 	SendDlgItemMessage(hWnd, IDC_EDIT_CID, EM_SETLIMITTEXT, 19, 0);
@@ -196,7 +206,8 @@ static std::basic_string<TCHAR> StringTrim(const std::basic_string<TCHAR>& s)
     return std::basic_string<TCHAR>(start, end + 1);
 }
 
-static bool GetEditTextField(HWND hWnd, char* buffer, const char* empty, int id, const char* default_value)
+static bool GetEditTextField(HWND hWnd, char* buffer /* length 128 */,
+		const char* empty, int id, const char* default_value)
 {
 	int count = GetWindowTextLength(GetDlgItem(hWnd, id));
 	if (count == 0)
@@ -211,7 +222,7 @@ static bool GetEditTextField(HWND hWnd, char* buffer, const char* empty, int id,
 		{
 			if (c > 255)
 			{
-				MessageBox(hWnd, GetRCString(IDS_ANCIICHARS), L"", MB_OK | MB_ICONWARNING);
+				MessageBox(hWnd, GetRCString(IDS_ANCIICHARS), _T(""), MB_OK | MB_ICONWARNING);
 				return false;
 			}
 		}
@@ -222,7 +233,7 @@ static bool GetEditTextField(HWND hWnd, char* buffer, const char* empty, int id,
 			return false;
 		}
 #ifdef UNICODE
-		WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, buffer, 128, nullptr, false);
+		WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, buffer, 128, nullptr, FALSE);
 #else
 		strcpy(buffer, text.c_str());
 #endif // UNICODE
@@ -230,6 +241,9 @@ static bool GetEditTextField(HWND hWnd, char* buffer, const char* empty, int id,
 
 	return true;
 }
+
+extern BasicMutex mutex;
+extern RichPresence rpc;
 
 static bool ProcessCommand(HWND hDlg)
 {
@@ -263,20 +277,20 @@ static bool ProcessCommand(HWND hDlg)
 	{
 		__int64 oldAppID = config._client_id;
 		// is locked in case Notepad++ opens a file while the configuration is being copied
-		mutex.lock();
+		mutex.Lock();
 		memcpy(&config, &copy, sizeof(PluginConfig));
-		mutex.unlock();
+		mutex.Unlock();
 		if (!copy._enable)
-			DiscordClosePresence();
+			rpc.Close();
 		else
 		{
 			// If the new ID is different from the previous one, then the presence is
 			// closed and a new one is created with the new ID
 			if (oldAppID != client_id)
-				DiscordClosePresence();
+				rpc.Close();
 
-			DiscordUpdatePresence();
-			DiscordInitPresence();
+			rpc.Update();
+			rpc.Init();
 		}
 
 		SaveConfig(copy);

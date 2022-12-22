@@ -34,8 +34,9 @@
 #define IDC_GROUD_ID                    -1
 
 
-#define PLUGIN_VERSION                  1,5,389,1
-#define PLUGIN_VERSION_STR              "1.5.389.1"
+#define PLUGIN_VERSION                  1,6,453,1
+#define PLUGIN_VERSION_STR              "1.6.453.1"
+#define PLUGIN_VERSION_INT              164531
 
 #define PLUGIN_ABOUT \
 	TEXT("Discord Rich Presence by Zukaritasu\n\nVersion " PLUGIN_VERSION_STR "\n\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")

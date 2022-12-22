@@ -13,14 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef PLUGINDEFINITION_H
-#define PLUGINDEFINITION_H
+#pragma once
 
 #include "PluginInterface.h"
-
-// ==================================================================
-// FUNCTIONS AND CONSTANTS OF THIS TEMPLATE
-// ==================================================================
 
 const TCHAR NPP_PLUGIN_NAME[] = TEXT("Discord Rich Presence");
 const int nbFunc = 3;
@@ -32,12 +27,7 @@ void commandMenuCleanUp();
 
 bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc, 
 				ShortcutKey *sk = NULL, bool check0nInit = false);
-				
-// ==================================================================
-// FUNCTIONS OF THE PLUGIN 
-// ==================================================================
 
 void OptionsPlugin();
 void About();
-
-#endif // !PLUGINDEFINITION_H
+void ScintillaNotify(SCNotification *notifyCode);

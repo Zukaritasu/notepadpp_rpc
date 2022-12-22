@@ -26,7 +26,6 @@ extern NppData nppData;
 #endif // _DEBUG
 
 #include <tchar.h>
-#include <strsafe.h>
 #include <string>
 
 void ShowErrorMessage(LPCTSTR message, HWND hWnd)
@@ -68,8 +67,8 @@ void ShowDiscordError(EDiscordResult result)
 {
 	if (result != DiscordResult_Ok)
 	{
-		TCHAR buf[128];
-		StringCbPrintf(buf, sizeof(buf), DISCORD_ERROR_FORMAT, static_cast<int>(result));
+		TCHAR buf[128] = { '\0' };
+		_sntprintf(buf, 128, DISCORD_ERROR_FORMAT, static_cast<int>(result));
 		ShowErrorMessage(buf);
 	}
 }

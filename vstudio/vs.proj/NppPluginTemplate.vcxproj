@@ -39,7 +39,10 @@
     <ClInclude Include="..\src\PluginError.h" />
     <ClInclude Include="..\src\PluginDiscord.h" />
     <ClInclude Include="..\src\PluginUtil.h" />
-    <ClInclude Include="..\src\PluginRPCFormat.h" />
+    <ClInclude Include="..\src\PresenceTextFormat.h" />
+	<ClInclude Include="..\src\StringBuilder.h" />
+	<ClInclude Include="..\src\PluginThread.h" />
+	<ClInclude Include="..\src\LanguageInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NppPluginDemo.cpp" />
@@ -49,7 +52,8 @@
     <ClCompile Include="..\src\PluginError.cpp" />
     <ClCompile Include="..\src\PluginDiscord.cpp" />
     <ClCompile Include="..\src\PluginUtil.cpp" />
-    <ClCompile Include="..\src\PluginRPCFormat.cpp" />
+    <ClCompile Include="..\src\PresenceTextFormat.cpp" />
+	<ClCompile Include="..\src\LanguageInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\PluginResources.rc" />

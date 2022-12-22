@@ -18,20 +18,22 @@
 #include "PluginResources.h"
 #include "PluginDefinition.h"
 
-#include <Windows.h>
-#include <Shlwapi.h>
-#include <strsafe.h>
+#include <windows.h>
+#include <shlwapi.h>
+#include <tchar.h>
+#include <fstream>
+#include <string.h>
 
 extern NppData nppData;
 
-#pragma warning(disable: 4996) // wcscpy
+#pragma warning(disable: 4996)
 
 #define APPNAME _T("DiscordRPC")
 
-static LPTSTR GetFileNameConfig(LPTSTR buffer, int size)
+static TCHAR* GetFileNameConfig(TCHAR* buffer, size_t size)
 {
 	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, size, (LPARAM)buffer);
-	StringCbCat(buffer, sizeof(TCHAR) * size, _T("\\DiscordRPC.ini"));
+	_tcsncat(buffer, _T("\\DiscordRPC.ini"), size);
 	return buffer;
 }
 
@@ -93,9 +95,10 @@ void LoadConfig(PluginConfig& config)
 	config._lang_image   = GetBool(_T("langImage"));
 	config._hide_state   = GetBool(_T("hideState"));
 
-	TCHAR id[19] = { 0 };
-	int count = GetPrivateProfileString(APPNAME, _T("clientId"), _T(DEF_APPLICATION_ID_STR), id, 19, file);
-	if (count != 18 || (config._client_id = _tstoi64(id)) < 1E17)
+	TCHAR id[20] = { 0 };
+	int count = GetPrivateProfileString(APPNAME, _T("clientId"), _T(DEF_APPLICATION_ID_STR), id, ARRAYSIZE(id), file);
+	errno = 0;
+	if (count < 18 || count > 19 || (config._client_id = _ttoi64(id)) < 1E17 || errno == ERANGE)
 	{
 		config._client_id = DEF_APPLICATION_ID;
 	}
@@ -121,8 +124,8 @@ void SaveConfig(const PluginConfig& config)
 	WriteBool(_T("langImage"),   config._lang_image);
 	WriteBool(_T("hideState"),   config._hide_state);
 
-	TCHAR id[19];
-	StringCbPrintf(id, sizeof(id), _T("%I64d"), config._client_id);
+	TCHAR id[20] = { '\0' };
+	_sntprintf(id, 20, _T("%I64d"), config._client_id);
 	WritePrivateProfileString(APPNAME, _T("clientId"), id, file);
 	
 	WriteProperty(_T("detailsFormat"), config._details_format, file);

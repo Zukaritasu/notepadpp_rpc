@@ -15,15 +15,14 @@
 
 #pragma once
 
-#include "PluginUtil.h"
+#define NPP_DEFAULTIMAGE  "favicon"
 
-// FieInfo struct contains information on the path and name of the file,
-// including the extension. In case the file has no extension, it will
-// be classified as a text file
-struct FileInfo
+struct LanguageInfo
 {
-	char  name[MAX_PATH];
-	char  extension[MAX_PATH];
+	const char* _name;
+	const char* _large_image;
+
+	LanguageInfo& operator =(const LanguageInfo& info);
 };
 
-void ProcessFormat(char* buf, const char* format, const FileInfo* info, const LanguageInfo* lang = nullptr);
+LanguageInfo GetLanguageInfo(const char* extension);

@@ -21,6 +21,7 @@
 extern FuncItem funcItem[nbFunc];
 extern NppData nppData;
 
+#include <stdio.h>
 
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD  reasonForCall, LPVOID /*lpReserved*/)
 {
@@ -69,6 +70,7 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
 
 extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 {
+	ScintillaNotify(notifyCode);
 	switch (notifyCode->nmhdr.code) 
 	{
 		case NPPN_SHUTDOWN:

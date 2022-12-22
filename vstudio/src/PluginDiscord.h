@@ -16,7 +16,38 @@
 #pragma once
 
 #include <Windows.h>
+#include <memory>
+#include <discord_game_sdk.h>
 
-void DiscordInitPresence();
-void DiscordUpdatePresence();
-void DiscordClosePresence();
+#include "PluginThread.h"
+#include "PluginConfig.h"
+#include "PluginUtil.h"
+#include "PresenceTextFormat.h"
+
+class RichPresence
+{
+public:
+	RichPresence() {}
+	RichPresence(const RichPresence&) = delete;
+
+	void Init();
+	void Update(bool updateLook = true) noexcept;
+	void Close() noexcept;
+
+private:
+	std::unique_ptr<IDiscordCore> _core;
+	DiscordActivity _rpc{};
+	PresenceTextFormat format;
+
+	BasicThread*  _callbacks = nullptr;
+	BasicThread*  _status    = nullptr;
+	volatile bool _active    = false;
+
+	void UpdateAssets() noexcept;
+	bool Connect(IDiscordCore** core) noexcept;
+	void ResetElapsedTime() noexcept;
+	void CoreDestroy() noexcept;
+
+	static void CallBacks(void* data) noexcept;
+	static void Status(void* data) noexcept;
+};
