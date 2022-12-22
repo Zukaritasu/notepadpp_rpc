@@ -19,6 +19,8 @@ And paste the content into that folder. If you had Notepad++ open then you shoul
 
 *The plugin is available on [The official collection of Notepad++ plugins](https://github.com/notepad-plus-plus/nppPluginList). You can install it from the plugin manager by entering "Discord Rich Presence" in "search".*
 
+*The plugin has a default application ID, so it is not necessary to create an application for the plugin to work, only in case you want to create a custom application with your images*
+
 ## Support
 If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/xEtAtmU6 and go to the **#npp-support** channel and leave your question with the following information:
 
