@@ -23,7 +23,7 @@ And now it's time! Open Notepad++ and verify that the rich presence is showing u
 
 *The plugin has a default application ID, so it is not necessary to create an application for the plugin to work, only in case you want to create a custom application with your images*
 
-# Contributing
+## Contributing
 
 There are two ways to contribute to this repository, the first is by helping in the editing of images, for this you should go to [Contribute with image editing](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/images/CONTRIBUTING.md). The second way to contribute is by solving problems in the source code or adding new features to the plugin
 
