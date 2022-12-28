@@ -17,6 +17,8 @@
 
 #include "PluginInterface.h"
 
+#include <windows.h>
+
 const TCHAR NPP_PLUGIN_NAME[] = TEXT("Discord Rich Presence");
 const int nbFunc = 3;
 

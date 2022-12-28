@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "PluginConfig.h"
-#include "PluginError.h"
 #include "PluginResources.h"
 #include "PluginDefinition.h"
 
@@ -23,6 +22,8 @@
 #include <tchar.h>
 #include <fstream>
 #include <string.h>
+
+#include "PluginError.h"
 
 extern NppData nppData;
 

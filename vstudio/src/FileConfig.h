@@ -36,16 +36,17 @@ private:
 
 inline bool FileConfig::GetBool(const TString& key, bool def)
 {
-	return GetPrivateProfileInt(appname.c_str(), key.c_str(), def ? 1 : 0, file_name.c_str()) == 1;
+	return ::GetPrivateProfileInt(appname.c_str(), key.c_str(), def ? 1 : 0, file_name.c_str()) == 1;
 }
 
 inline __int64 FileConfig::GetInt64(const TString& key, __int64 def)
 {
 	TCHAR number[48] = { '\0' };
-	int count = GetPrivateProfileString(appname.c_str(), key.c_str(), nullptr,
+	int count = ::GetPrivateProfileString(appname.c_str(), key.c_str(), nullptr,
 			number, ARRAYSIZE(number), file_name.c_str());
 	if (count == 0)
 		return def;
+	errno = 0;
 	auto result = _tstoi64(number);
 	return errno == ERANGE ? def : result;
 }

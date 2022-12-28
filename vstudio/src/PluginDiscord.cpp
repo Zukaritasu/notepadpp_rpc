@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "PluginDiscord.h"
-#include "PluginError.h"
 #include "PluginInterface.h"
 
 #include <cstdlib>
@@ -26,13 +25,16 @@
 #include <time.h>
 #include <string>
 
+#include "PluginError.h"
+
 #pragma warning(disable: 4996)
 
-#define NPP_NAME          "Notepad++"
-
+namespace
+{
+	const char* NPP_NAME = "Notepad++";
+}
 
 extern PluginConfig config;
-extern NppData      nppData;
 
 BasicMutex mutex;
 

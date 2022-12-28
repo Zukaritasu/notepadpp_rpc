@@ -27,13 +27,13 @@ extern NppData   nppData;
 
 
 // Exclusive use buffer of the GetRCString function to save a string resource
-static TCHAR global_buf[512];
+static TCHAR string_buffer[512];
 
 LPTSTR GetRCString(unsigned ids)
 {
-	global_buf[0] = 0;
-	LoadString(hPlugin, ids, global_buf, ARRAYSIZE(global_buf));
-	return global_buf;
+	string_buffer[0] = 0;
+	LoadString(hPlugin, ids, string_buffer, 512);
+	return string_buffer;
 }
 
 HWND GetCurrentScintilla()

@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "PluginError.h"
 #include "PluginDefinition.h"
+#include "PluginError.h"
 #include "PluginResources.h"
 
 #pragma warning(disable: 4996 4100)
@@ -38,7 +38,7 @@ void ShowErrorMessage(LPCTSTR message, HWND hWnd)
 #endif // _DEBUG
 }
 
-void ShowLastError()
+void ShowWin32LastError()
 {
 	auto code = GetLastError();
 	if (code != ERROR_SUCCESS)

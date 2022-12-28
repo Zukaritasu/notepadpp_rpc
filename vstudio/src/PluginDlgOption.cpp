@@ -16,7 +16,6 @@
 #include "PluginInterface.h"
 #include "PluginDlgOption.h"
 #include "PluginResources.h"
-#include "PluginError.h"
 #include "PluginDiscord.h"
 #include "PluginUtil.h"
 #include "PluginThread.h"
@@ -27,6 +26,8 @@
 #include <limits.h>
 #include <errno.h>
 #include <tchar.h>
+
+#include "PluginError.h"
 #ifdef _DEBUG
 #include <cstdio>
 #endif // _DEBUG
@@ -354,6 +355,6 @@ void ShowPluginDlgOption()
 	if (!DialogBox(hPlugin, MAKEINTRESOURCE(IDD_PLUGIN_OPTIONS),
 		nppData._nppHandle, OptionsProc))
 	{
-		ShowLastError();
+		ShowWin32LastError();
 	}
 }

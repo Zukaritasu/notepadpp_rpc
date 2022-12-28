@@ -22,6 +22,8 @@
 #include <cstdio>
 #endif // _DEBUG
 
+#include <tchar.h>
+
 #pragma warning(disable: 4100 4996)
 
 FuncItem     funcItem[nbFunc];
@@ -90,6 +92,7 @@ void ScintillaNotify(SCNotification* notifyCode)
 	case NPPN_BUFFERACTIVATED:
 	case NPPN_FILERENAMED:
 		rpc.Update();
+		break;
 	default:
 		break;
 	}

@@ -16,8 +16,9 @@
 #pragma once
 
 #include <discord_game_sdk.h>
-#include <Windows.h>
+#include <windows.h>
+#include <exception>
 
 void ShowErrorMessage(LPCTSTR message, HWND hWnd = nullptr);
-void ShowLastError();
+void ShowWin32LastError();
 void ShowDiscordError(EDiscordResult result);
