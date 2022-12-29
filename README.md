@@ -48,3 +48,8 @@ If you have any problems with the plugin or have any questions about its functio
 * [SDK Starter Guide](https://discord.com/developers/docs/game-sdk/sdk-starter-guide)
 * [Activities](https://discord.com/developers/docs/game-sdk/activities)
 * [How To](https://discord.com/developers/docs/rich-presence/how-to)
+
+## Libraries used
+
+* [Discord Game SDK](https://discord.com/developers/docs/game-sdk)
+* [yaml-cpp](https://github.com/jbeder/yaml-cpp)
