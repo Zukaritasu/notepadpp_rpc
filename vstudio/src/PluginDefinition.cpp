@@ -80,7 +80,7 @@ bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
 
 void About()
 {
-	MessageBox(nppData._nppHandle, PLUGIN_ABOUT, TITLE_MBOX_DRPC,
+	MessageBox(nppData._nppHandle, PLUGIN_ABOUT, _T(TITLE_MBOX_DRPC),
 			   MB_ICONINFORMATION | MB_OK);
 }
 

@@ -279,7 +279,7 @@ static bool ProcessCommand(HWND hDlg)
 		__int64 oldAppID = config._client_id;
 		// is locked in case Notepad++ opens a file while the configuration is being copied
 		mutex.Lock();
-		memcpy(&config, &copy, sizeof(PluginConfig));
+		config = copy;
 		mutex.Unlock();
 		if (!copy._enable)
 			rpc.Close();

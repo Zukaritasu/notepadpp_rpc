@@ -34,7 +34,7 @@ void ShowErrorMessage(LPCTSTR message, HWND hWnd)
 	_tprintf(_T(" > Error: %s\n"), message);
 #else
 	MessageBox(hWnd != nullptr ? hWnd : nppData._nppHandle, message,
-		TITLE_MBOX_DRPC, MB_ICONERROR | MB_OK);
+		_T(TITLE_MBOX_DRPC), MB_ICONERROR | MB_OK);
 #endif // _DEBUG
 }
 

@@ -41,7 +41,7 @@
 #define PLUGIN_ABOUT \
 	TEXT("Discord Rich Presence by Zukaritasu\n\nVersion " PLUGIN_VERSION_STR "\n\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")
 
-#define TITLE_MBOX_DRPC                 TEXT("Discord RPC")
+#define TITLE_MBOX_DRPC                 "Discord RPC"
 
 #define DEF_DETAILS_FORMAT              "Editing: %(file)"
 #define DEF_STATE_FORMAT                "Size: %(size)"
