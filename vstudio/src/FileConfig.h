@@ -33,7 +33,7 @@ public:
 private:
 	TString file_name, appname;
 };
-
+/*
 inline bool FileConfig::GetBool(const TString& key, bool def)
 {
 	return ::GetPrivateProfileInt(appname.c_str(), key.c_str(), def ? 1 : 0, file_name.c_str()) == 1;
@@ -66,3 +66,4 @@ inline std::string FileConfig::GetString(const TString& key, const TString& def)
 #endif // UNICODE
 	return count == 0 ? def : buffer;
 }
+*/

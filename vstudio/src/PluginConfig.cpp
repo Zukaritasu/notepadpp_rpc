@@ -22,6 +22,7 @@
 #include <tchar.h>
 #include <fstream>
 #include <string.h>
+#include <yaml-cpp\yaml.h>
 
 #include "PluginError.h"
 
@@ -29,35 +30,11 @@ extern NppData nppData;
 
 #pragma warning(disable: 4996)
 
-#define APPNAME _T("DiscordRPC")
-
 static TCHAR* GetFileNameConfig(TCHAR* buffer, size_t size)
 {
 	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, size, (LPARAM)buffer);
-	_tcsncat(buffer, _T("\\DiscordRPC.ini"), size);
+	_tcsncat(buffer, _T("\\DiscordRPC.yaml"), size);
 	return buffer;
-}
-
-static void ReadProperty(char buffer[128], LPCTSTR key, LPCTSTR def, LPCTSTR file)
-{
-#ifdef UNICODE
-	wchar_t value[128] = { 0 };
-	GetPrivateProfileString(APPNAME, key, def, value, 128, file);
-	WideCharToMultiByte(CP_UTF8, 0, value, -1, buffer, 128, nullptr, false);
-#else
-	GetPrivateProfileString(APPNAME, key, def, buffer, 128, file);
-#endif // UNICODE
-}
-
-static void WriteProperty(LPCTSTR key, const char* value, LPCTSTR file)
-{
-#ifdef UNICODE
-	wchar_t buf[128] = { 0 };
-	MultiByteToWideChar(CP_UTF8, 0, value, -1, buf, 128);
-	WritePrivateProfileString(APPNAME, key, buf, file);
-#else
-	WritePrivateProfileString(APPNAME, key, value, file);
-#endif // UNICODE
 }
 
 void GetDefaultConfig(PluginConfig& config)
@@ -74,6 +51,12 @@ void GetDefaultConfig(PluginConfig& config)
 	strcpy(config._large_text_format, DEF_LARGE_TEXT_FORMAT);
 }
 
+void ShowIOException(const std::string& desc, const std::exception& e)
+{
+	std::string message = desc + ". " + e.what();
+	MessageBoxA(nppData._nppHandle, message.c_str(), TITLE_MBOX_DRPC, MB_OK | MB_ICONERROR);
+}
+
 void LoadConfig(PluginConfig& config)
 {
 	TCHAR file[MAX_PATH] = { 0 };
@@ -85,28 +68,34 @@ void LoadConfig(PluginConfig& config)
 		return;
 	}
 
-	auto GetBool = [&file](LPCTSTR key) -> bool
+	try
 	{
-		return GetPrivateProfileInt(APPNAME, key, 1, file) == 1;
-	};
+		YAML::Node __config = YAML::Load(std::ifstream(file));
 
-	config._hide_details = GetBool(_T("hideDetails"));
-	config._elapsed_time = GetBool(_T("elapsedTime"));
-	config._enable       = GetBool(_T("enable"));
-	config._lang_image   = GetBool(_T("langImage"));
-	config._hide_state   = GetBool(_T("hideState"));
+		config._hide_details = __config["hideDetails"].as<bool>(false);
+		config._elapsed_time = __config["elapsedTime"].as<bool>(true);
+		config._enable       = __config["enable"].as<bool>(true);
+		config._lang_image   = __config["langImage"].as<bool>(true);
+		config._hide_state   = __config["hideState"].as<bool>(false);
+		config._client_id    = __config["clientId"].as<__int64>(DEF_APPLICATION_ID);
 
-	TCHAR id[20] = { 0 };
-	int count = GetPrivateProfileString(APPNAME, _T("clientId"), _T(DEF_APPLICATION_ID_STR), id, ARRAYSIZE(id), file);
-	errno = 0;
-	if (count < 18 || count > 19 || (config._client_id = _ttoi64(id)) < 1E17 || errno == ERANGE)
-	{
-		config._client_id = DEF_APPLICATION_ID;
+		if (config._client_id < 1E17)
+		{
+			config._client_id = DEF_APPLICATION_ID;
+		}
+
+		strncpy(config._details_format, 
+			__config["detailsFormat"].as<std::string>(DEF_DETAILS_FORMAT).c_str(), MAX_FORMAT_BUF);
+		strncpy(config._state_format, 
+			__config["stateFormat"].as<std::string>(DEF_STATE_FORMAT).c_str(), MAX_FORMAT_BUF);
+		strncpy(config._large_text_format, 
+			__config["largeTextFormat"].as<std::string>(DEF_LARGE_TEXT_FORMAT).c_str(), MAX_FORMAT_BUF);
 	}
-
-	ReadProperty(config._details_format, _T("detailsFormat"), _T(DEF_DETAILS_FORMAT), file);
-	ReadProperty(config._state_format, _T("stateFormat"), _T(DEF_STATE_FORMAT), file);
-	ReadProperty(config._large_text_format, _T("largeTextFormat"), _T(DEF_LARGE_TEXT_FORMAT), file);
+	catch (const std::exception& e)
+	{
+		ShowIOException("Configuration file read error", e);
+		GetDefaultConfig(config);
+	}
 }
 
 void SaveConfig(const PluginConfig& config)
@@ -114,22 +103,32 @@ void SaveConfig(const PluginConfig& config)
 	TCHAR file[MAX_PATH] = { 0 };
 	GetFileNameConfig(file, MAX_PATH);
 
-	auto WriteBool = [&file](LPCTSTR key, bool value)
+	try
 	{
-		WritePrivateProfileString(APPNAME, key, value ? _T("1") : _T("0"), file);
-	};
+		YAML::Node node;
 
-	WriteBool(_T("hideDetails"), config._hide_details);
-	WriteBool(_T("elapsedTime"), config._elapsed_time);
-	WriteBool(_T("enable"),      config._enable);
-	WriteBool(_T("langImage"),   config._lang_image);
-	WriteBool(_T("hideState"),   config._hide_state);
+		node["hideDetails"]     = config._hide_details;
+		node["elapsedTime"]     = config._elapsed_time;
+		node["enable"]          = config._enable;
+		node["langImage"]       = config._lang_image;
+		node["hideState"]       = config._hide_state;
+		node["clientId"]        = config._client_id;
+		node["detailsFormat"]   = config._details_format;
+		node["stateFormat"]     = config._state_format;
+		node["largeTextFormat"] = config._large_text_format;
 
-	TCHAR id[20] = { '\0' };
-	_sntprintf(id, 20, _T("%I64d"), config._client_id);
-	WritePrivateProfileString(APPNAME, _T("clientId"), id, file);
-	
-	WriteProperty(_T("detailsFormat"), config._details_format, file);
-	WriteProperty(_T("stateFormat"), config._state_format, file);
-	WriteProperty(_T("largeTextFormat"), config._large_text_format, file);
+		std::ofstream out(file);
+		out << node;
+		out.close();
+	}
+	catch (const std::exception& e)
+	{
+		ShowIOException("Error writing to the configuration file", e);
+	}
+}
+
+PluginConfig& PluginConfig::operator=(const PluginConfig& pg)
+{
+	memcpy(this, &pg, sizeof(PluginConfig));
+	return *this;
 }
