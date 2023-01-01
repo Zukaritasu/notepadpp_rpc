@@ -71,7 +71,9 @@ void LoadConfig(PluginConfig& config)
 
 	try
 	{
-		YAML::Node __config = YAML::Load(std::ifstream(file));
+		std::ifstream stream(file);
+		YAML::Node __config = YAML::Load(stream);
+		stream.close();
 
 		config._hide_details = __config["hideDetails"].as<bool>(false);
 		config._elapsed_time = __config["elapsedTime"].as<bool>(true);
