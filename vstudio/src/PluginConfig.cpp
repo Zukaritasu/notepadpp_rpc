@@ -22,13 +22,14 @@
 #include <tchar.h>
 #include <fstream>
 #include <string.h>
+
+#pragma warning(disable: 4996 4251 4275)
+
 #include <yaml-cpp\yaml.h>
 
 #include "PluginError.h"
 
 extern NppData nppData;
-
-#pragma warning(disable: 4996)
 
 static TCHAR* GetFileNameConfig(TCHAR* buffer, size_t size)
 {
