@@ -185,7 +185,9 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	SetControlText(hWnd, IDC_DETAILS, pConfig._details_format);
 	SetControlText(hWnd, IDC_STATE, pConfig._state_format);
 	SetControlText(hWnd, IDC_LARGETEXT, pConfig._large_text_format);
-	
+
+	SetFocus(GetDlgItem(hWnd, IDCANCEL));
+
 	return true;
 }
 
@@ -338,6 +340,13 @@ static INT_PTR CALLBACK OptionsProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 			break;
 		case IDC_RESET:
 			{
+				if (MessageBox(hDlg, 
+					_T("Are you sure to reset the configuration to its original state?"), 
+					_T(""), MB_OKCANCEL | MB_ICONINFORMATION) != IDOK)
+				{
+					break;
+				}
+;
 				// The default configuration is assigned
 				PluginConfig cfg;
 				GetDefaultConfig(cfg);

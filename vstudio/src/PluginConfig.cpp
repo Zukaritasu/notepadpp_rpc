@@ -60,7 +60,7 @@ void ShowIOException(const std::string& desc, const std::exception& e)
 
 void LoadConfig(PluginConfig& config)
 {
-	TCHAR file[MAX_PATH] = { 0 };
+	TCHAR file[MAX_PATH] = { _T('\0') };
 	GetFileNameConfig(file, MAX_PATH);
 
 	if (!PathFileExists(file))
