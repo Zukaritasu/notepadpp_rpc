@@ -41,15 +41,6 @@ extern NppData      nppData;
 extern HINSTANCE    hPlugin;
 extern PluginConfig config;
 
-#ifdef __MINGW32__
-#define TTS_USEVISUALSTYLE 0x100
-#define TTM_SETMAXTIPWIDTH WM_USER + 24
-#endif
-
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#endif
-
 static bool CreateTooltipInfo(HWND hWnd)
 {
 	// A tooltip is created to assign it to each component or option window
@@ -103,7 +94,7 @@ static bool CreateTooltipInfo(HWND hWnd)
 static bool GetDiscordApplicationID(HWND hWnd, __int64& client_id)
 {
 	int length = GetWindowTextLength(GetDlgItem(hWnd, IDC_EDIT_CID));
-	if (length >= 18)
+	if (length >= MIN_CLIENT_ID)
 	{
 		TCHAR sclient_id[48] = { '\0' };
 		GetDlgItemText(hWnd, IDC_EDIT_CID, sclient_id, 48);

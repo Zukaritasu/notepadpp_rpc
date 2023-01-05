@@ -34,14 +34,13 @@
 #define IDC_GROUD_ID                    -1
 
 
-#define PLUGIN_VERSION                  1,6,453,1
-#define PLUGIN_VERSION_STR              "1.6.453.1"
-#define PLUGIN_VERSION_INT              164531
+#define PLUGIN_VERSION                  1,6,526,1
+#define PLUGIN_VERSION_STR              "1.6.526.1"
 
 #define PLUGIN_ABOUT \
 	TEXT("Discord Rich Presence by Zukaritasu\n\nVersion " PLUGIN_VERSION_STR "\n\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")
 
-#define TITLE_MBOX_DRPC                 "Discord RPC"
+#define TITLE_MBOX_DRPC                 "Discord Rich Presence"
 
 #define DEF_DETAILS_FORMAT              "Editing: %(file)"
 #define DEF_STATE_FORMAT                "Size: %(size)"
@@ -49,7 +48,7 @@
 #define DEF_APPLICATION_ID_STR          "938157386068279366"
 #define DEF_APPLICATION_ID              938157386068279366
 
-#define MIN_CLIENT_ID                   1E17
+#define MIN_CLIENT_ID                   10000000000000000
 
 #define IDS_ENABLERPC                   101
 #define IDS_CLIENTID                    102

@@ -82,7 +82,7 @@ void LoadConfig(PluginConfig& config)
 		config._hide_state   = __config["hideState"].as<bool>(false);
 		config._client_id    = __config["clientId"].as<__int64>(DEF_APPLICATION_ID);
 
-		if (config._client_id < 1E17)
+		if (config._client_id < MIN_CLIENT_ID)
 		{
 			config._client_id = DEF_APPLICATION_ID;
 		}

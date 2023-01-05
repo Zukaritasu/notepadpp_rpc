@@ -44,31 +44,23 @@ void ShowWin32LastError()
 	if (code != ERROR_SUCCESS)
 	{
 		LPTSTR message = nullptr;
-		auto count = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |  FORMAT_MESSAGE_ALLOCATE_BUFFER, 
-								   nullptr, code, 0, reinterpret_cast<LPTSTR>(&message), 0, nullptr);
-		if (count > 0 && message != nullptr)
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |  FORMAT_MESSAGE_ALLOCATE_BUFFER, 
+					  nullptr, code, 0, reinterpret_cast<LPTSTR>(&message), 0, nullptr);
+		if (message != nullptr)
 		{
-#ifdef _DEBUG
-			ShowErrorMessage(message);
-#else
 			std::basic_string<TCHAR> msg_format(_T("An error has occurred in the plugin. Reason:\n\n"));
 			ShowErrorMessage(msg_format.append(message).c_str());
-#endif // _DEBUG
-			
 			LocalFree(message);
 		}
 	}
 }
-
-#define DISCORD_ERROR_FORMAT \
-	_T("An error has occurred in Discord. Error code: %d")
 
 void ShowDiscordError(EDiscordResult result)
 {
 	if (result != DiscordResult_Ok)
 	{
 		TCHAR buf[128] = { '\0' };
-		_sntprintf(buf, 128, DISCORD_ERROR_FORMAT, static_cast<int>(result));
+		_sntprintf(buf, 128, _T("An error has occurred in Discord. Error code: %d"), static_cast<int>(result));
 		ShowErrorMessage(buf);
 	}
 }
