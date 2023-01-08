@@ -86,11 +86,11 @@ void About()
 
 void ScintillaNotify(SCNotification* notifyCode)
 {
-
 	switch (notifyCode->nmhdr.code)
 	{
 	case NPPN_BUFFERACTIVATED:
 	case NPPN_FILERENAMED:
+	case NPPN_LANGCHANGED:
 		rpc.Update();
 		break;
 	default:
