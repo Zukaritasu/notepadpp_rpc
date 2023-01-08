@@ -16,18 +16,16 @@
 #include "PluginConfig.h"
 #include "PluginResources.h"
 #include "PluginDefinition.h"
+#include "PluginError.h"
 
 #include <windows.h>
 #include <shlwapi.h>
 #include <tchar.h>
 #include <fstream>
 #include <string.h>
-
-#pragma warning(disable: 4996 4251 4275)
-
 #include <yaml-cpp\yaml.h>
 
-#include "PluginError.h"
+#pragma warning(disable: 4996)
 
 extern NppData nppData;
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Zukaritasu
+// Copyright (C) 2022 - 2023 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -34,8 +34,8 @@
 #define IDC_GROUD_ID                    -1
 
 
-#define PLUGIN_VERSION                  1,6,526,1
-#define PLUGIN_VERSION_STR              "1.6.526.1"
+#define PLUGIN_VERSION                  1,6,534,1
+#define PLUGIN_VERSION_STR              "1.6.534.1"
 
 #define PLUGIN_ABOUT \
 	TEXT("Discord Rich Presence by Zukaritasu\n\nVersion " PLUGIN_VERSION_STR "\n\nLicense GPLv3\n\nShows in discord the file that is currently being edited in Notepad++.")
