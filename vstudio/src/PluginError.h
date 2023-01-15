@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Zukaritasu
+// Copyright (C) 2022 - 2023 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 
 #include <discord_game_sdk.h>
 #include <windows.h>
-#include <exception>
 
 void ShowErrorMessage(LPCTSTR message, HWND hWnd = nullptr);
 void ShowWin32LastError();

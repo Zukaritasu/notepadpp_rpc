@@ -18,8 +18,6 @@
 
 #include <cstdlib>
 #include <cstdio>
-#include <mutex>
-#include <thread>
 #include <Shlwapi.h>
 #include <tchar.h>
 #include <time.h>
