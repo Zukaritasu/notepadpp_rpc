@@ -16,6 +16,7 @@
 #include "LanguageInfo.h"
 #include "PluginInterface.h"
 
+
 extern NppData nppData;
 
 LanguageInfo GetLanguageInfo(const char* extension)
@@ -27,15 +28,13 @@ LanguageInfo GetLanguageInfo(const char* extension)
 	
 	LangType current_lang = L_TEXT;
 	SendMessage(nppData._nppHandle, NPPM_GETCURRENTLANGTYPE, 0, (LPARAM)&current_lang);
-	
+
 	switch (current_lang)
 	{
 	case L_JAVA:          return { "JAVA", "java" };
-	case L_JAVASCRIPT: // Javascript and typescript
+	case L_JAVASCRIPT:
 	case L_JS:
-		if (strcmp(extension, "ts") == 0 || strcmp(extension, "tsx") == 0)
-			return               { "TYPESCRIPT", "typescript" };
-		return                   { "JAVASCRIPT", "javascript" };
+		                  return { "JAVASCRIPT", "javascript" };
 	case L_C:             return { "C", "c" };
 	case L_CPP:           return { "C++", "cpp" };
 	case L_CS:            return { "C#", "csharp"};
@@ -69,6 +68,8 @@ LanguageInfo GetLanguageInfo(const char* extension)
 		// In dark mode it is L_USER but it is ignored 
 		if (strcmp(extension, ".md") == 0 || strcmp(extension, ".markdown") == 0)
 			return               { "MARKDOWN", "markdown" };
+		if (strcmp(extension, ".ts") == 0 || strcmp(extension, ".tsx") == 0)
+			return               { "TYPESCRIPT", "typescript" };
 		break;
 	}
 	return { "TEXT", NPP_DEFAULTIMAGE };

@@ -35,3 +35,5 @@
 	- Added a link in the options window to create an application
 	- Bugs were found in the source code and resolved
 	- Added a documentation in the repository to create an application
+[Version 1.6]
+	
