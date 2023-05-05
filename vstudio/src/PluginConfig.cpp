@@ -22,7 +22,7 @@
 #include <shlwapi.h>
 #include <tchar.h>
 #include <fstream>
-#include <string.h>
+#include <cstring>
 #include <yaml-cpp\yaml.h>
 
 #pragma warning(disable: 4996)
