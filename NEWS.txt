@@ -24,6 +24,7 @@
 	  now the respective name of the language "Editing a C++ file" is shown
 	- Added support for Windows resource files, now it shows as
 	  "Editing a RESOURCE file"
+	  
 [Version 1.5]
 	In this new version you can now have an even more customized
 	presence with the ease of modifying "details", "state" and
@@ -35,11 +36,13 @@
 	- Added a link in the options window to create an application
 	- Bugs were found in the source code and resolved
 	- Added a documentation in the repository to create an application
+	
 [Version 1.6]
 	This new version does not bring very relevant changes in the sense
 	of adding a new option in the options window or any change in the
 	rich presence, for the moment only bugs and errors in the operation
 	of the plugin were solved
+	
 [Version 1.6.6]
 	Fixed a problem with Typescript where it was not displaying the
 	language image in the rich presence. So far that was the only
