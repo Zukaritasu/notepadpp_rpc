@@ -93,17 +93,21 @@ static bool CreateTooltipInfo(HWND hWnd)
 static bool GetDiscordApplicationID(HWND hWnd, __int64& client_id)
 {
 	int length = GetWindowTextLength(GetDlgItem(hWnd, IDC_EDIT_CID));
-	if (length >= MIN_CLIENT_ID)
+	if (length >= MIN_LENGTH_CLIENT_ID)
 	{
 		TCHAR sclient_id[48] = { '\0' };
-		GetDlgItemText(hWnd, IDC_EDIT_CID, sclient_id, 48);
+		GetDlgItemText(hWnd, IDC_EDIT_CID, sclient_id, ARRAYSIZE(sclient_id));
 		errno = 0;
 		client_id = _ttoi64(sclient_id);
+#ifdef _DEBUG
+		printf("New client id: %lld\n", client_id);
+#endif // _DEBUG
+
 		if (errno == ERANGE) // the number is very large
 		{
 			ShowErrorMessage(_T("The application ID is a very large number. Enter a valid ID"), hWnd);
 			return false;
-		} else if (client_id >= MIN_CLIENT_ID)
+		} else if (client_id >= MIN_LENGTH_CLIENT_ID)
 			return true;
 	}
 	else if (length == 0)
