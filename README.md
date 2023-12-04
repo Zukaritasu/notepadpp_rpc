@@ -39,6 +39,10 @@ If you have any problems with the plugin or have any questions about its functio
 - The DiscordRPC plugin version
 ```
 
+## Important
+To ensure proper functionality, it is essential to have `Visual Studio 2013 (VC++ 12.0)`, as well as `Visual Studio 2015, 2017, 2019, and 2022` installed. You can find the necessary redistributable packages [here](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
+
+
 ## Documentation
 
 * [Create Custom Rich Presence](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
