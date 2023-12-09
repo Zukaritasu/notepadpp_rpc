@@ -62,7 +62,7 @@ LanguageInfo GetLanguageInfo(const char* extension)
 	case L_ERLANG:        return { "ERLANG", "erlang" };
 	case L_COFFEESCRIPT:  return { "COFFEESCRIPT", "coffeescript" };
 	case L_RC:            return { "RESOURCE", NPP_DEFAULTIMAGE };
-	case L_ASSEMBLY:             return { "ASSEMBLY", "assembly" };
+	case L_ASM:             return { "ASSEMBLY", "assembly" };
 	default:
 		if (strcmp(extension, ".gitignore") == 0)
 			return               { "GIT", "git" };
