@@ -64,7 +64,7 @@ LanguageInfo GetLanguageInfo(const char* extension)
 	case L_RC:            return { "RESOURCE", NPP_DEFAULTIMAGE };
 	case L_ASM:             return { "ASSEMBLY", "assembly" };
 	case L_SQL:             return { "SQL", "sql" };
-	case L_M:             return { "MATLAB", "matlab" };
+	case L_MATLAB:             return { "MATLAB", "matlab" };
 	default:
 		if (strcmp(extension, ".gitignore") == 0)
 			return               { "GIT", "git" };
