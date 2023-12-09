@@ -38,6 +38,8 @@ Support
 * git
 * markdown
 * assembly
+* sql
+* matlab
 
 The "favicon" image cannot be missing in your application, you must include it. [Open favicon](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/favicon.png)
 
