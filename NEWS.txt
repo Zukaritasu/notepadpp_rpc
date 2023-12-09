@@ -48,3 +48,15 @@
 	language image in the rich presence. So far that was the only
 	change applied. If there is any bug I don't know about let me 
 	know or create a fork and contribute to the project!
+
+[Version 1.7.6]
+	Fixed a problem when adding the custom ID of the application
+	which was throwing an error message saying that the ID is
+	invalid because it was out of range of the ID which is 17 - 19,
+	now you can enter your custom ID application without problems
+	
+[Version 1.8.6]
+	Contributor Ameer Alntsheh added a new image for the Assembly
+	programming language. So far there are no bugs in the code that
+	need to be fixed.
+	
