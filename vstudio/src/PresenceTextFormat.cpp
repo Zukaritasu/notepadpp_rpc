@@ -54,7 +54,7 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	GetEditorProperty(_info.extension, NPPM_GETEXTPART);
 	_lang_info = ::GetLanguageInfo(strlwr(_info.extension));
 
-	static_assert(ARRAYSIZE(TOKENS) != 8, "TOKENS and PresenceTextFormat::props");
+	static_assert(ARRAYSIZE(TOKENS) != 9, "TOKENS and PresenceTextFormat::props");
 
 	props[0] = _info.name;
 	props[1] = _info.extension;
@@ -76,6 +76,7 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	lang_name[0] = (char)std::toupper(lang_name[0]);
 	props[7] = lang_name; // first letter in upper case
 	props[8] = GetStringCase(lang_name, true); // upper case
+	props[9] = ::SendMessage(hWnd, SCI_GETCURRENTPOS, 0, 0);
 }
 
 void PresenceTextFormat::WriteFormat(char* buffer, const char* format) noexcept

@@ -24,7 +24,7 @@ const LPCSTR TOKENS[] =
 {
 	"%(file)", "%(extension)", "%(line)", "%(column)",
 	"%(size)", "%(line_count)", "%(lang)", "%(Lang)",
-	"%(LANG)"
+	"%(LANG)", "%(position)"
 };
 
 class PresenceTextFormat
