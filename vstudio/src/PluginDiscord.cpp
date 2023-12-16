@@ -15,6 +15,7 @@
 
 #include "PluginDiscord.h"
 #include "PluginInterface.h"
+#include "PluginResources.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -246,7 +247,7 @@ reconnect:
 			goto reconnect;
 		}
 		mutex.Unlock();
-		::Sleep(1000 / 60);
+		::Sleep(RPC_UPDATE_TIME / 60);
 	}
 }
 
@@ -256,7 +257,7 @@ void RichPresence::Status(void* data) noexcept
 {
 	while (true)
 	{
-		::Sleep(10000);
+		::Sleep(RPC_UPDATE_TIME);
 		reinterpret_cast<RichPresence*>(data)->Update(false);
 	}
 
