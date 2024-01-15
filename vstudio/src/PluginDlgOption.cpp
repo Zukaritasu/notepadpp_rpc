@@ -262,6 +262,8 @@ static bool ProcessCommand(HWND hDlg)
 	copy._elapsed_time = IsButtonChecked(IDC_SHOW_ELAPSED_TIME);
 	copy._hide_details = IsButtonChecked(IDC_HIDE_DETAILS);
 
+	copy._refreshTime  = config._refreshTime;
+
 	// The new formats are obtained but first they are validated
 	if (!GetEditTextField(hDlg, copy._details_format, TEXT_BOX_EMPTY(details), IDC_DETAILS, DEF_DETAILS_FORMAT) ||
 		!GetEditTextField(hDlg, copy._state_format, TEXT_BOX_EMPTY(state), IDC_STATE, DEF_STATE_FORMAT) || 

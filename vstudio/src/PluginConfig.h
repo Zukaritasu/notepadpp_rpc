@@ -21,15 +21,16 @@
 
 struct PluginConfig
 {
-	__int64 _client_id;
-	char    _details_format[MAX_FORMAT_BUF];
-	char    _state_format[MAX_FORMAT_BUF];
-	char    _large_text_format[MAX_FORMAT_BUF];
-	bool    _enable;
-	bool    _hide_state;
-	bool    _lang_image;
-	bool    _elapsed_time;
-	bool    _hide_details;
+	__int64  _client_id;
+	unsigned _refreshTime;
+	char     _details_format[MAX_FORMAT_BUF];
+	char     _state_format[MAX_FORMAT_BUF];
+	char     _large_text_format[MAX_FORMAT_BUF];
+	bool     _enable;
+	bool     _hide_state;
+	bool     _lang_image;
+	bool     _elapsed_time;
+	bool     _hide_details;
 
 	PluginConfig& operator=(const PluginConfig& pg);
 };

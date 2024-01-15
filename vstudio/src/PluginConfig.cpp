@@ -44,6 +44,7 @@ void GetDefaultConfig(PluginConfig& config)
 	config._lang_image   = true;
 	config._hide_state   = false;
 	config._client_id    = DEF_APPLICATION_ID;
+	config._refreshTime  = DEF_REFRESH_TIME;
 
 	strcpy(config._details_format, DEF_DETAILS_FORMAT);
 	strcpy(config._state_format, DEF_STATE_FORMAT);
@@ -79,10 +80,16 @@ void LoadConfig(PluginConfig& config)
 		config._lang_image   = __config["langImage"].as<bool>(true);
 		config._hide_state   = __config["hideState"].as<bool>(false);
 		config._client_id    = __config["clientId"].as<__int64>(DEF_APPLICATION_ID);
+		config._refreshTime  = __config["refreshTime"].as<unsigned>(DEF_REFRESH_TIME);
 
 		if (config._client_id < MIN_CLIENT_ID)
 		{
 			config._client_id = DEF_APPLICATION_ID;
+		}
+
+		if (config._refreshTime < (RPC_UPDATE_TIME / 60))
+		{
+			config._refreshTime = DEF_REFRESH_TIME;
 		}
 
 		strncpy(config._details_format, 
@@ -117,6 +124,7 @@ void SaveConfig(const PluginConfig& config)
 		node["detailsFormat"]   = config._details_format;
 		node["stateFormat"]     = config._state_format;
 		node["largeTextFormat"] = config._large_text_format;
+		node["refreshTime"]     = config._refreshTime;
 
 		std::ofstream out(file);
 		out << node;

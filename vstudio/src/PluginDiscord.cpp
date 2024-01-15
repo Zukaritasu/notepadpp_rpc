@@ -255,9 +255,10 @@ reconnect:
 
 void RichPresence::Status(void* data) noexcept
 {
+	const unsigned refreshTime = config._refreshTime;
 	while (true)
 	{
-		::Sleep(RPC_UPDATE_TIME);
+		::Sleep(refreshTime);
 		reinterpret_cast<RichPresence*>(data)->Update(false);
 	}
 
