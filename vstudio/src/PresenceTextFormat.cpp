@@ -76,7 +76,7 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	lang_name[0] = (char)std::toupper(lang_name[0]);
 	props[7] = lang_name; // first letter in upper case
 	props[8] = GetStringCase(lang_name, true); // upper case
-	props[9] = ::SendMessage(hWnd, SCI_GETCURRENTPOS, 0, 0) + 1;
+	props[9] = static_cast<int>(::SendMessage(hWnd, SCI_GETCURRENTPOS, 0, 0) + 1L);
 }
 
 void PresenceTextFormat::WriteFormat(char* buffer, const char* format) noexcept
