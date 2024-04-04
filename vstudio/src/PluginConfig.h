@@ -19,6 +19,8 @@
 
 #define MAX_FORMAT_BUF 128
 
+#define PLUGIN_CONFIG_FILENAME "DiscordRPC.yaml"
+
 struct PluginConfig
 {
 	__int64  _client_id;

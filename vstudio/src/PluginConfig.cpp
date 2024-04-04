@@ -32,7 +32,7 @@ extern NppData nppData;
 static TCHAR* GetFileNameConfig(TCHAR* buffer, size_t size)
 {
 	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, size, (LPARAM)buffer);
-	_tcsncat(buffer, _T("\\DiscordRPC.yaml"), size);
+	_tcsncat(buffer, _T("\\" PLUGIN_CONFIG_FILENAME), size);
 	return buffer;
 }
 
