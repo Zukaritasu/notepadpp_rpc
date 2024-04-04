@@ -17,12 +17,14 @@
 #include "PluginResources.h"
 #include "PluginDlgOption.h"
 #include "PluginDiscord.h"
+#include "PluginConfig.h"
 
 #ifdef _DEBUG
 #include <cstdio>
 #endif // _DEBUG
 
 #include <tchar.h>
+#include <shlwapi.h>
 
 #pragma warning(disable: 4100 4996)
 
@@ -40,7 +42,8 @@ void commandMenuInit()
 
 	setCommand(0, _T("Options"), OptionsPlugin);
 	setCommand(1, nullptr,       nullptr);
-	setCommand(2, _T("About"),   About);
+	setCommand(2, _T("Edit configuration file"), OpenConfigurationFile);
+	setCommand(3, _T("About"),   About);
 }
 
 void commandMenuCleanUp()
@@ -101,4 +104,18 @@ void ScintillaNotify(SCNotification* notifyCode)
 void OptionsPlugin()
 {
 	ShowPluginDlgOption();
+}
+
+void OpenConfigurationFile()
+{
+	TCHAR strBuffer[MAX_PATH]{};
+	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)strBuffer);
+	_tcsncat(strBuffer, _T("\\" PLUGIN_CONFIG_FILENAME), MAX_PATH - lstrlen(strBuffer));
+	if (strBuffer[0] != 0)
+	{
+		if (!PathFileExists(strBuffer))
+			SaveConfig(config);
+		if (PathFileExists(strBuffer))
+			SendMessage(nppData._nppHandle, NPPM_DOOPEN, 0, (LPARAM)strBuffer);
+	}
 }
