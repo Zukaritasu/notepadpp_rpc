@@ -126,7 +126,7 @@ void RichPresence::Close() noexcept
 			// The rich presence is closed and the discord core is destroyed
 			auto activity_manager = _core->get_activity_manager(_core.get());
 			activity_manager->clear_activity(activity_manager, nullptr, nullptr);
-			_core->run_callbacks(_core.get());
+			/*_core->run_callbacks(_core.get());*/
 			CoreDestroy();
 		}
 		// The elapsed time is reset in case of a new reconnection  
