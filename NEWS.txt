@@ -59,4 +59,9 @@
 	Contributor Ameer Alntsheh added a new image for the Assembly
 	programming language. So far there are no bugs in the code that
 	need to be fixed.
+
+[Version 2.0]
+	This version has improved the efficiency of the rich presence
+	response time to changes in the editor and fixed some bugs in
+	the code.
 	
