@@ -41,7 +41,7 @@ There are two ways to contribute to this repository, the first is by helping in 
 To solve problems in the source code and among other things it is not necessary to follow the same syntax as the rest of the source code, you only have to comment the code and be tidy. After you have created a fork and made changes in the source code you only have to make pull request and explain what you have done... remember to test the plugin to make sure it works correctly
 
 ## Support
-If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/JTSVh8chcx and go to the **#npp-support** channel and leave your question with the following information:
+If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/sKeKgJSz3S and go to the **#support** channel and leave your question with the following information:
 
 ```
 - What version of Windows do you have?
