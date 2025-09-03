@@ -58,7 +58,7 @@ private:
 	LanguageInfo _lang_info{};
 
 	void GetEditorProperty(char* buffer, int prop) noexcept;
-	bool ConstainsTag(const char* format, const char* tag, size_t pos) noexcept;
+	bool ContainsTag(const char* format, const char* tag, size_t pos) noexcept;
 	// true = upper, false = lower
 	std::string& GetStringCase(std::string& s, bool case_) noexcept;
 };

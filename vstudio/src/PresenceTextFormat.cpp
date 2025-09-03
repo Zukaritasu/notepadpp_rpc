@@ -91,7 +91,7 @@ void PresenceTextFormat::WriteFormat(char* buffer, const char* format) noexcept
 		{
 			for (size_t k = 0; k < ARRAYSIZE(props); k++)
 			{
-				if (format[i + 2] == props[k].key[2] && ConstainsTag(format, props[k].key.c_str(), i))
+				if (format[i + 2] == props[k].key[2] && ContainsTag(format, props[k].key.c_str(), i))
 				{
 					builder.Append(props[k].value);
 					i += props[k].key.length() - 1;
@@ -129,7 +129,7 @@ void PresenceTextFormat::GetEditorProperty(char* buffer, int prop) noexcept
 #endif // UNICODE
 }
 
-bool PresenceTextFormat::ConstainsTag(const char* format, const char* tag, size_t pos) noexcept
+bool PresenceTextFormat::ContainsTag(const char* format, const char* tag, size_t pos) noexcept
 {
 	for (size_t i = 0; tag[i] != '\0'; i++)
 		if (format[pos] == '\0' || format[pos++] != tag[i])
