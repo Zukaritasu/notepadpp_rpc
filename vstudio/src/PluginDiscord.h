@@ -48,6 +48,6 @@ private:
 	void ResetElapsedTime() noexcept;
 	void CoreDestroy() noexcept;
 
-	static void CallBacks(void* data) noexcept;
-	static void Status(void* data) noexcept;
+	static void CallBacks(void* data, volatile bool* keepRunning = nullptr) noexcept;
+	static void Status(void* data, volatile bool* keepRunning = nullptr) noexcept;
 };

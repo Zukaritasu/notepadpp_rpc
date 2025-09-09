@@ -35,7 +35,11 @@ namespace
 
 extern PluginConfig config;
 
+
 BasicMutex mutex;
+volatile bool isClosing = false;
+
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ //
 
 void RichPresence::Init()
 {
@@ -57,6 +61,11 @@ void RichPresence::Init()
 
 void RichPresence::Update(bool updateLook) noexcept
 {
+	if (isClosing)
+	{
+		return;
+	}
+
 	format.LoadEditorStatus();
 	mutex.Lock();
 
@@ -92,41 +101,47 @@ void RichPresence::Update(bool updateLook) noexcept
 #endif // _DEBUG
 		);
 	}
+
 	mutex.Unlock();
 }
 
 void RichPresence::Close() noexcept
 {
+	isClosing = true;
 	if (_status != nullptr)
 	{
 		mutex.Lock();
-		_status->Wait();
-		_status->Terminate();
-		mutex.Unlock();
+		_status->Stop();
 		delete _status;
 		_status = nullptr;
+		mutex.Unlock();
 	}
 
 	if (_callbacks != nullptr)
 	{
 		if (_active)
-		{
-			_active = false;
-			_callbacks->Wait(INFINITE);
-		}
+			_callbacks->Stop();
 		else
-			_callbacks->Terminate();
-		
+			_callbacks->Kill();
+
 		delete _callbacks;
 		_callbacks = nullptr;
 
 		mutex.Lock();
+
 		if (_core)
 		{
 			// The rich presence is closed and the discord core is destroyed
 			auto activity_manager = _core->get_activity_manager(_core.get());
-			activity_manager->clear_activity(activity_manager, nullptr, nullptr);
-			/*_core->run_callbacks(_core.get());*/
+			activity_manager->clear_activity(activity_manager, nullptr, [](void*, EDiscordResult result) {
+				if (result != DiscordResult_Ok) {
+					std::wstring message = L"An error occurred while clearing the activity\nError code: " + std::to_wstring(static_cast<int>(result));
+					wprintf(L"%ws\n", message.c_str());
+				} else {
+					printf("[RPC] Activity has been cleared\n");
+				}
+			});
+			_core->run_callbacks(_core.get());
 			CoreDestroy();
 		}
 		// The elapsed time is reset in case of a new reconnection  
@@ -137,6 +152,7 @@ void RichPresence::Close() noexcept
 		mutex.Unlock();
 	}
 }
+
 
 void RichPresence::UpdateAssets() noexcept
 {
@@ -209,7 +225,7 @@ void RichPresence::CoreDestroy() noexcept
 	}
 }
 
-void RichPresence::CallBacks(void* data) noexcept
+void RichPresence::CallBacks(void* data, volatile bool* keepRunning) noexcept
 {
 	RichPresence* rpc = reinterpret_cast<RichPresence*>(data);
 	IDiscordCore* discord_core = nullptr;
@@ -234,6 +250,12 @@ reconnect:
 
 	while (rpc->_active)
 	{
+		if (!(*keepRunning))
+		{
+			rpc->_active = false;
+			break;
+		}
+
 		mutex.Lock();
 		auto result = rpc->_core->run_callbacks(rpc->_core.get());
 		if (result != DiscordResult_Ok)
@@ -253,15 +275,17 @@ reconnect:
 
 #pragma warning(disable: 4127) // while (true) const expression
 
-void RichPresence::Status(void* data) noexcept
+void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
 {
 	const unsigned refreshTime = config._refreshTime;
-	while (true)
+
+	while (*keepRunning)
 	{
 		::Sleep(refreshTime);
+		if (!*keepRunning)
+			break;
 		reinterpret_cast<RichPresence*>(data)->Update(false);
 	}
-
 #ifdef _DEBUG
 	printf(" > status finished!\n");
 #endif // _DEBUG
