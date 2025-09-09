@@ -19,97 +19,99 @@
 #include <exception>
 #include <stdio.h>
 
-class BasicThread
-{
-public:
-	BasicThread(void(*run)(void*), void* data = nullptr);
-	BasicThread(const BasicThread&) = delete;
-	~BasicThread();
+////////////////////////////////////////////////////////////////////
 
-	void Terminate();
-	void Wait(DWORD milliseconds = 0);
+typedef void(*BASIC_THREAD_ROUTINE)(void*, volatile bool*);
+
+class BasicThread {
+public:
+	BasicThread(BASIC_THREAD_ROUTINE run, void* data = nullptr)
+		: data(data), keepRunning(new volatile bool(true)), func(run)
+	{
+		handle = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)Run, this, 0, nullptr);
+		if (!handle) {
+			throw std::exception("CreateThread() returns NULL");
+		}
+	}
+
+	~BasicThread() {
+		Terminate();
+		delete keepRunning;
+	}
+
+	void Terminate() const {
+		DWORD exitCode;
+		if (!::GetExitCodeThread(handle, &exitCode)) {
+			*keepRunning = false;
+			::WaitForSingleObject(handle, INFINITE);
+		}
+
+		::CloseHandle(handle);
+	}
+
+	void Wait(DWORD milliseconds = INFINITE) const {
+		DWORD exitCode;
+		if (!::GetExitCodeThread(handle, &exitCode)) {
+			::WaitForSingleObject(handle, milliseconds);
+		}
+	}
+
+	void Stop() {
+		*keepRunning = false;
+	}
+#pragma warning(disable: 6258)
+	void Kill() {
+		::TerminateThread(handle, 0);
+	}
+#pragma warning(default: 6258)
+
+	static void Sleep(volatile bool* keepRunning, DWORD totalMilliseconds) {
+		const DWORD interval = 500;
+
+		for (DWORD elapsed = 0; elapsed < totalMilliseconds; elapsed += interval) {
+			if (keepRunning && !(*keepRunning))
+				break;
+			::Sleep(interval);
+		}
+	}
+
 
 private:
-	struct Params
-	{
-		void(*func)(void*);
-		void* data;
-	};
+	static DWORD CALLBACK Run(void* param) {
+		BasicThread* thread = static_cast<BasicThread*>(param);
+		thread->func(thread->data, thread->keepRunning);
+		return 0;
+	}
 
+	BASIC_THREAD_ROUTINE func;
+	void* data;
+	volatile bool* keepRunning;
 	HANDLE handle;
-
-	static DWORD CALLBACK Run(void*);
 };
 
-inline BasicThread::BasicThread(void(*run)(void*), void* data)
-{
-	Params* params = new Params;
-	params->func = run;
-	params->data = data;
-	handle = ::CreateThread(nullptr, 0, BasicThread::Run, params, 0, nullptr);
-	if (handle == nullptr)
-	{
-		throw std::exception("CreateThread() function returns null");
-	}
-}
 
-inline BasicThread::~BasicThread()
-{
-	::CloseHandle(handle);
-}
+//GetExitCodeThread
 
-inline void BasicThread::Terminate()
-{
-	::TerminateThread(handle, EXIT_SUCCESS);
-}
+////////////////////////////////////////////////////////////////////
 
-inline void BasicThread::Wait(DWORD milliseconds)
-{
-	::WaitForSingleObject(handle, milliseconds);
-}
-
-inline DWORD BasicThread::Run(void* params)
-{
-	reinterpret_cast<BasicThread::Params*>(params)->func(
-		reinterpret_cast<BasicThread::Params*>(params)->data);
-	delete params;
-	return 0;
-}
-
-class BasicMutex
-{
+class BasicMutex {
 public:
-	BasicMutex();
-	BasicMutex(const BasicMutex&) = delete;
-	~BasicMutex();
+	BasicMutex() {
+		::InitializeCriticalSection(&criticalSection);
+	}
 
-	void Lock();
-	void Unlock();
+	~BasicMutex() {
+		::DeleteCriticalSection(&criticalSection);
+	}
+
+	void Lock() {
+		::EnterCriticalSection(&criticalSection);
+	}
+
+	void Unlock() {
+		::LeaveCriticalSection(&criticalSection);
+	}
 
 private:
-	HANDLE handle;
+	CRITICAL_SECTION criticalSection;
 };
-
-inline BasicMutex::BasicMutex()
-{
-	handle = ::CreateMutex(nullptr, FALSE, nullptr);
-	if (handle == nullptr)
-	{
-		throw std::exception("CreateMutex() function returns null");
-	}
-}
-
-inline BasicMutex::~BasicMutex()
-{
-	::CloseHandle(handle);
-}
-
-inline void BasicMutex::Lock()
-{
-	::WaitForSingleObject(handle, INFINITE);
-}
-
-inline void BasicMutex::Unlock()
-{
-	::ReleaseMutex(handle);
-}
