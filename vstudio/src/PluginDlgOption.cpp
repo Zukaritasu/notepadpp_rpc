@@ -166,7 +166,7 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	{ 
 		_T("%(file)"), _T("%(line)"), _T("%(column)"), _T("%(size)"),
 		_T("%(line_count)"), _T("%(extension)"), _T("%(lang)"), _T("%(Lang)"),
-		_T("%(LANG)"), _T("%(position)")
+		_T("%(LANG)"), _T("%(position)"), _T("%(workspace)")
 	};
 
 	for (size_t i = 0; i < ARRAYSIZE(tags); i++)

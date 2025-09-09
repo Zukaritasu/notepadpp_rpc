@@ -22,6 +22,11 @@
 #include <Shlwapi.h>
 #include <discord_game_sdk.h>
 
+#ifdef _DEBUG
+	#include <cstdio>
+#endif // _DEBUG
+
+
 #pragma warning(disable: 4458 4996)
 
 extern NppData nppData;
@@ -77,6 +82,15 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	props[7] = lang_name; // first letter in upper case
 	props[8] = GetStringCase(lang_name, true); // upper case
 	props[9] = static_cast<int>(::SendMessage(hWnd, SCI_GETCURRENTPOS, 0, 0) + 1L);
+	
+	char currentDir[MAX_PATH] = { '\0' };
+	GetEditorProperty(currentDir, NPPM_GETCURRENTDIRECTORY);
+
+	std::string workspace;
+	if (SearchWorkspace(currentDir, workspace))
+		props[10] = workspace;
+	else
+		props[10] = "<unknown>";
 }
 
 void PresenceTextFormat::WriteFormat(char* buffer, const char* format) noexcept
@@ -135,6 +149,27 @@ bool PresenceTextFormat::ContainsTag(const char* format, const char* tag, size_t
 		if (format[pos] == '\0' || format[pos++] != tag[i])
 			return false;
 	return true;
+}
+
+bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::string& workspace) noexcept
+{
+	while (!currentDir.empty())
+	{
+		if (std::filesystem::exists(currentDir / ".git"))
+		{
+			workspace = currentDir.string();
+			workspace.find_last_of("\\") != std::string::npos ?
+				workspace = workspace.substr(workspace.find_last_of("\\/") + 1) :
+				workspace = workspace;
+			return true;
+		}
+
+		auto tempCurrentDir = currentDir;
+		currentDir = currentDir.parent_path();
+		if (currentDir == tempCurrentDir) // root reached
+			break;
+	}
+	return false;
 }
 
 std::string& PresenceTextFormat::GetStringCase(std::string& s, bool case_) noexcept

@@ -25,6 +25,9 @@
 
 #include <tchar.h>
 #include <shlwapi.h>
+#include <commctrl.h>
+#pragma comment(lib, "Comctl32.lib")
+
 
 #pragma warning(disable: 4100 4996)
 
@@ -35,6 +38,18 @@ RichPresence rpc;
 PluginConfig config{};
 HINSTANCE    hPlugin = nullptr;
 
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ //
+
+LRESULT CALLBACK SubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+	switch (message) {
+	case WM_CLOSE:
+		rpc.Close();
+	default:
+		return DefSubclassProc(hwnd, message, wParam, lParam);
+	}
+	return 0;
+}
+
 void commandMenuInit()
 {
 	LoadConfig(config);
@@ -44,16 +59,17 @@ void commandMenuInit()
 	setCommand(1, nullptr,       nullptr);
 	setCommand(2, _T("Edit configuration file"), OpenConfigurationFile);
 	setCommand(3, _T("About"),   About);
+
+	SetWindowSubclass(nppData._nppHandle, SubclassProc, 29, 0);
 }
 
 void commandMenuCleanUp()
 {
-	rpc.Close();
 }
 
 void pluginInit(HANDLE handle)
 {
-#ifdef _DEBUG // Console is enabled for debugging 
+#if defined(_DEBUG) || NPP_ENABLE_CONSOLE // Console is enabled for debugging 
 	AllocConsole();
 	freopen("CONOUT$", "w", stdout);
 

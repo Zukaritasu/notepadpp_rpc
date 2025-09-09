@@ -19,12 +19,13 @@
 
 #include <Windows.h>
 #include <string>
+#include <filesystem>
 
 const LPCSTR TOKENS[] =
 {
 	"%(file)", "%(extension)", "%(line)", "%(column)",
 	"%(size)", "%(line_count)", "%(lang)", "%(Lang)",
-	"%(LANG)", "%(position)"
+	"%(LANG)", "%(position)", "%(workspace)"
 };
 
 class PresenceTextFormat
@@ -59,6 +60,7 @@ private:
 
 	void GetEditorProperty(char* buffer, int prop) noexcept;
 	bool ContainsTag(const char* format, const char* tag, size_t pos) noexcept;
+	bool SearchWorkspace(std::filesystem::path currentDir, std::string& workspace) noexcept;
 	// true = upper, false = lower
 	std::string& GetStringCase(std::string& s, bool case_) noexcept;
 };
