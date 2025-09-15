@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Zukaritasu
+// Copyright (C) 2022 -2025 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -93,11 +93,11 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 		props[10] = "<unknown>";
 }
 
-void PresenceTextFormat::WriteFormat(char* buffer, const char* format) noexcept
+void PresenceTextFormat::WriteFormat(std::string& buffer, const char* format) noexcept
 {
-	StringBuilder builder(buffer, sizeof(DiscordActivity::details));
+	char buf[128] = { '\0' };
+	StringBuilder builder(buf, sizeof buf);
 	bool _continue;
-
 	for (size_t i = 0; format[i] != '\0' && !builder.IsFull(); i++)
 	{
 		_continue = false;
@@ -114,11 +114,11 @@ void PresenceTextFormat::WriteFormat(char* buffer, const char* format) noexcept
 				}
 			}
 		}
-
 		if (_continue) continue;
-
 		builder.Append(format[i]);
 	}
+
+	buffer = buf;
 }
 
 bool PresenceTextFormat::IsFileInfoEmpty() const noexcept
