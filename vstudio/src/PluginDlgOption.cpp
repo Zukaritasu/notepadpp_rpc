@@ -77,7 +77,7 @@ static bool CreateTooltipInfo(HWND hWnd)
 	SetToolTip(IDC_ENABLE,            IDS_ENABLERPC);
 	SetToolTip(IDC_HIDE_STATE,        IDS_HIDE_STATE);
 	SetToolTip(IDC_SHOW_LANGICON,     IDS_SHOWLANGICON);
-	SetToolTip(IDC_SHOW_ELAPSED_TIME, IDS_SHOWELAPSEDTIME);
+	//SetToolTip(IDC_SHOW_ELAPSED_TIME, IDS_SHOWELAPSEDTIME);
 	SetToolTip(IDC_HIDE_DETAILS,      IDS_HIDE_DETAILS);
 	SetToolTip(IDC_RESET,             IDS_BTNRESET);
 	SetToolTip(IDC_VARIABLES,         IDS_ALLVARIABLESTIP);
@@ -158,7 +158,7 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	SetButtonCheck(IDC_ENABLE,            pConfig._enable);
 	SetButtonCheck(IDC_HIDE_STATE,        pConfig._hide_state);
 	SetButtonCheck(IDC_SHOW_LANGICON,     pConfig._lang_image);
-	SetButtonCheck(IDC_SHOW_ELAPSED_TIME, pConfig._elapsed_time);
+	//SetButtonCheck(IDC_SHOW_ELAPSED_TIME, pConfig._elapsed_time);
 	SetButtonCheck(IDC_HIDE_DETAILS,      pConfig._hide_details);
 
 	// The available tags that will be displayed in the combobox
@@ -253,13 +253,13 @@ static bool ProcessCommand(HWND hDlg)
 			== BST_CHECKED;
 	};
 	
-	PluginConfig copy;
+	PluginConfig copy{};
 
 	copy._client_id    = client_id;
 	copy._enable       = IsButtonChecked(IDC_ENABLE);
 	copy._hide_state   = IsButtonChecked(IDC_HIDE_STATE);
 	copy._lang_image   = IsButtonChecked(IDC_SHOW_LANGICON);
-	copy._elapsed_time = IsButtonChecked(IDC_SHOW_ELAPSED_TIME);
+	//copy._elapsed_time = IsButtonChecked(IDC_SHOW_ELAPSED_TIME);
 	copy._hide_details = IsButtonChecked(IDC_HIDE_DETAILS);
 
 	copy._refreshTime  = config._refreshTime;
@@ -287,9 +287,8 @@ static bool ProcessCommand(HWND hDlg)
 			// closed and a new one is created with the new ID
 			if (oldAppID != client_id)
 				rpc.Close();
-
-			rpc.Update();
 			rpc.Init();
+			rpc.Update();
 		}
 
 		SaveConfig(copy);
