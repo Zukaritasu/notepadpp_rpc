@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Zukaritasu
+// Copyright (C) 2022 - 2025 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ public:
 
 	void Append(const std::string& str);
 	void Append(char c);
-	bool IsFull();
+	bool IsFull() const;
 };
 
 inline StringBuilder::StringBuilder(char* buf, size_t length)
@@ -61,8 +61,8 @@ inline void StringBuilder::Append(char c)
 	}
 }
 
-inline bool StringBuilder::IsFull()
+inline bool StringBuilder::IsFull() const
 {
-	return _count == _length;
+	return _count >= _length - 1;
 }
 
