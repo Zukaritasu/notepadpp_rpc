@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Zukaritasu
+// Copyright (C) 2022 - 2025 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -37,9 +37,10 @@ extern PluginConfig config;
 
 
 BasicMutex mutex;
-volatile bool isClosing = false;
+volatile bool isClosed = false;
 
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ //
+
+
 
 void RichPresence::Init()
 {
@@ -61,17 +62,12 @@ void RichPresence::Init()
 
 void RichPresence::Update(bool updateLook) noexcept
 {
-	if (isClosing)
-	{
-		return;
-	}
+	if (isClosed) return;
 
 	format.LoadEditorStatus();
 	mutex.Lock();
 
-	ResetElapsedTime();
-
-	_rpc.details[0] = _rpc.state[0] = '\0';
+	_p.details = _p.state = "";
 	if (updateLook)
 	{
 		UpdateAssets();
@@ -79,35 +75,21 @@ void RichPresence::Update(bool updateLook) noexcept
 	if (!format.IsFileInfoEmpty())
 	{
 		if (!config._hide_details)
-			format.WriteFormat(_rpc.details, config._details_format);
+			format.WriteFormat(_p.details, config._details_format);
 		if (!config._hide_state)
-			format.WriteFormat(_rpc.state, config._state_format);
-#ifdef _DEBUG
-		printf("\n\n Updating...\n - %s\n - %s\n - %s\n", _rpc.details, _rpc.state, _rpc.assets.large_text);
-#endif // _DEBUG
+			format.WriteFormat(_p.state, config._state_format);
 	}
 
-	if (_core)
-	{
-		IDiscordActivityManager* manager = _core->get_activity_manager(_core.get());
-		manager->update_activity(manager, &_rpc, nullptr,
-#ifdef _DEBUG
-			[](void*, EDiscordResult result) {
-			if (result != DiscordResult_Ok)
-				printf("[RPC] Update presence | %d\n", static_cast<int>(result));
-		}
-#else
-			nullptr
-#endif // _DEBUG
-		);
-	}
-
+	_drp.SetPresence(_p, [](const std::string& error) {
+		printf(" > Discord SetPresence Error: %s\n", error.c_str());
+	});
+	
 	mutex.Unlock();
 }
 
 void RichPresence::Close() noexcept
 {
-	isClosing = true;
+	isClosed = true;
 	if (_status != nullptr)
 	{
 		mutex.Lock();
@@ -129,123 +111,67 @@ void RichPresence::Close() noexcept
 
 		mutex.Lock();
 
-		if (_core)
-		{
-			// The rich presence is closed and the discord core is destroyed
-			auto activity_manager = _core->get_activity_manager(_core.get());
-			activity_manager->clear_activity(activity_manager, nullptr, [](void*, EDiscordResult result) {
-				if (result != DiscordResult_Ok) {
-					std::wstring message = L"An error occurred while clearing the activity\nError code: " + std::to_wstring(static_cast<int>(result));
-					wprintf(L"%ws\n", message.c_str());
-				} else {
-					printf("[RPC] Activity has been cleared\n");
-				}
-			});
-			_core->run_callbacks(_core.get());
-			CoreDestroy();
-		}
-		// The elapsed time is reset in case of a new reconnection  
-		_rpc.timestamps.start = 0;
-#ifdef _DEBUG
-		printf(" > Presence has been closed\n");
-#endif // _DEBUG
+		_drp.Close();
+
 		mutex.Unlock();
 	}
 }
 
-
 void RichPresence::UpdateAssets() noexcept
 {
-	DiscordActivityAssets& assets = _rpc.assets;
-	assets.small_image[0] = assets.small_text[0] = 
-		assets.large_text[0] = assets.large_image[0] = '\0';
+	_p.smallText = _p.smallImage = 
+	_p.largeText = _p.largeImage = "";
 
 	if (!config._lang_image)
 	{
-		strcpy(assets.large_image, NPP_DEFAULTIMAGE);
-		strcpy(assets.large_text, NPP_NAME);
+		_p.largeImage = NPP_DEFAULTIMAGE;
+		_p.largeText = NPP_NAME;
 	}
 	else if (!format.IsFileInfoEmpty())
 	{
-		strcpy(assets.large_image, format.GetLanguageInfo()._large_image);
-		format.WriteFormat(assets.large_text, config._large_text_format);
-		if (strcmp(format.GetLanguageInfo()._large_image, NPP_DEFAULTIMAGE) != 0)
+		_p.largeImage = format.GetLanguageInfo()._large_image;
+		format.WriteFormat(_p.largeText, config._large_text_format);
+		if (_p.largeImage != NPP_DEFAULTIMAGE)
 		{
-			strcpy(assets.small_image, NPP_DEFAULTIMAGE);
-			strcpy(assets.small_text, NPP_NAME);
+			_p.smallImage = NPP_DEFAULTIMAGE;
+			_p.smallText = NPP_NAME;
 		}
 	}
+	else
+	{
+		_p.largeImage = NPP_DEFAULTIMAGE;
+		_p.largeText = NPP_NAME;
+	}
 }
 
-bool RichPresence::Connect(IDiscordCore** core) noexcept
+void RichPresence::Connect() noexcept
 {
-	DiscordCreateParams params;
-	DiscordCreateParamsSetDefault(&params);
-
-	params.client_id = config._client_id;
-	params.flags     = DiscordCreateFlags_NoRequireDiscord;
-
 reconnect:
-	EDiscordResult result = ::DiscordCreate(DISCORD_VERSION, &params, core);
-#ifdef _DEBUG
-	printf(" > Connect result code: %d\n", static_cast<int>(result));
-#endif // _DEBUG
-
-	if (result == DiscordResult_Ok)
-		return true;
-	else if (result == DiscordResult_InternalError || result == DiscordResult_NotRunning)
+	if (!_drp.Connect(config._client_id, [](const std::string& error) {
+		printf(" > Discord Connect Error: %s\n", error.c_str());
+	}))
 	{
-#ifdef _DEBUG
-		printf(" > reconnecting...\n");
-#endif // _DEBUG
-		Sleep(2000);
+		printf(" > Retrying connection in 2 seconds...\n");
+		::Sleep(2000);
 		goto reconnect;
-	}
-	::ShowDiscordError(result);
-	return false;
-}
-
-void RichPresence::ResetElapsedTime() noexcept
-{
-	if (!config._elapsed_time)
-		_rpc.timestamps.start = 0;
-	else if (_rpc.timestamps.start == 0)
-	{
-		_rpc.type = DiscordActivityType_Playing;
-		_rpc.timestamps.start = _time64(nullptr);
-	}
-}
-
-void RichPresence::CoreDestroy() noexcept
-{
-	if (_core)
-	{
-		_core->destroy(_core.get());
-		_core.release();
 	}
 }
 
 void RichPresence::CallBacks(void* data, volatile bool* keepRunning) noexcept
 {
 	RichPresence* rpc = reinterpret_cast<RichPresence*>(data);
-	IDiscordCore* discord_core = nullptr;
+	auto& drp = rpc->_drp;
 reconnect:
-	if (!rpc->Connect(&discord_core) || discord_core == nullptr)
-		return;
-	rpc->_core.reset(discord_core);
+	rpc->Connect();
 
-#ifdef _DEBUG
-	mutex.Lock();
-	rpc->_core->set_log_hook(rpc->_core.get(), DiscordLogLevel_Debug, nullptr,
-		[](void*, EDiscordLogLevel level, const char* message)
-	{
-		printf("[LOG] Level: %d | Message: %s\n", static_cast<int>(level), message);
-	});
-	mutex.Unlock();
-#endif // _DEBUG
-
-	rpc->ResetElapsedTime();
 	rpc->_active = true;
+
+	auto now = std::chrono::system_clock::now();
+	auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+	rpc->_p.startTime = timestamp;
+
+	isClosed = false;
+
 	rpc->Update();
 
 	while (rpc->_active)
@@ -257,14 +183,15 @@ reconnect:
 		}
 
 		mutex.Lock();
-		auto result = rpc->_core->run_callbacks(rpc->_core.get());
-		if (result != DiscordResult_Ok)
+
+		drp.Update([](const std::string& error) {
+			printf(" > Discord Update Error: %s\n", error.c_str());
+		});
+		if (!drp.IsConnected() || !drp.CheckConnection([](const std::string& error) {
+			printf(" > Discord Connection Error: %s\n", error.c_str());
+		}))
 		{
-#ifdef _DEBUG
-			printf("[RUN] - %d\n", static_cast<int>(result));
-#endif // _DEBUG
 			rpc->_active = false;
-			rpc->CoreDestroy();
 			mutex.Unlock();
 			goto reconnect;
 		}
@@ -286,7 +213,4 @@ void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
 			break;
 		reinterpret_cast<RichPresence*>(data)->Update(false);
 	}
-#ifdef _DEBUG
-	printf(" > status finished!\n");
-#endif // _DEBUG
 }

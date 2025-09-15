@@ -17,12 +17,12 @@
 
 #include <Windows.h>
 #include <memory>
-#include <discord_game_sdk.h>
 
 #include "PluginThread.h"
 #include "PluginConfig.h"
 #include "PluginUtil.h"
 #include "PresenceTextFormat.h"
+#include "DiscordRichPresence.hpp"
 
 class RichPresence
 {
@@ -35,8 +35,8 @@ public:
 	void Close() noexcept;
 
 private:
-	std::unique_ptr<IDiscordCore> _core;
-	DiscordActivity _rpc{};
+	DiscordRichPresence _drp;
+	Presence _p;
 	PresenceTextFormat format;
 
 	BasicThread*  _callbacks = nullptr;
@@ -44,9 +44,7 @@ private:
 	volatile bool _active    = false;
 
 	void UpdateAssets() noexcept;
-	bool Connect(IDiscordCore** core) noexcept;
-	void ResetElapsedTime() noexcept;
-	void CoreDestroy() noexcept;
+	void Connect() noexcept;
 
 	static void CallBacks(void* data, volatile bool* keepRunning = nullptr) noexcept;
 	static void Status(void* data, volatile bool* keepRunning = nullptr) noexcept;
