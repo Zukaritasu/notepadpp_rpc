@@ -6,7 +6,6 @@
 /.cproject
 /.project
 /images/resources
-/vstudio/src/resource.h
 /vstudio/*.sdf
 /vstudio/*.sln
 /vstudio/*.suo
