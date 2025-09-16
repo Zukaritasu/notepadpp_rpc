@@ -19,8 +19,39 @@ std::string DiscordRichPresence::generateNonce() const {
     return std::to_string(dis(gen));
 }
 
+std::string DiscordRichPresence::escapeJsonString(const std::string& str) const {
+    std::string escaped;
+    escaped.reserve(str.size() + 10); // Reserve extra space for escape characters
+    
+    for (char c : str) {
+        switch (c) {
+            case '"':  escaped += "\\\""; break;
+            case '\\': escaped += "\\\\"; break;
+            case '\b': escaped += "\\b"; break;
+            case '\f': escaped += "\\f"; break;
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            case '\t': escaped += "\\t"; break;
+            default:
+                if (c >= 0 && c < 32) {
+                    // Control characters
+                    escaped += "\\u";
+                    escaped += "0000";
+                    escaped[escaped.size() - 4] = '0' + ((c >> 12) & 15);
+                    escaped[escaped.size() - 3] = '0' + ((c >> 8) & 15);
+                    escaped[escaped.size() - 2] = '0' + ((c >> 4) & 15);
+                    escaped[escaped.size() - 1] = '0' + (c & 15);
+                } else {
+                    escaped += c;
+                }
+                break;
+        }
+    }
+    return escaped;
+}
+
 bool DiscordRichPresence::connectToDiscord(__int64 clientId, Exception exc) {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < MAX_PIPE_ATTEMPTS; i++) {
         std::string pipeName = R"(\\?\pipe\discord-ipc-)" + std::to_string(i);
         m_pipe = ::CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
         
@@ -49,7 +80,6 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
         return false;
     }
 
-    constexpr size_t MAX_MESSAGE_SIZE = 16384;
     if (json.size() > MAX_MESSAGE_SIZE) {
 		if (exc) exc("Message size exceeds maximum limit");
         return false;
@@ -147,7 +177,7 @@ void DiscordRichPresence::Update(Exception exc) noexcept {
         return;
     
     m_pingCounter++;
-    if (m_pingCounter >= 1800) {
+    if (m_pingCounter >= PING_INTERVAL) {
         if (!sendDiscordMessageSync(1, R"({"cmd":"DISPATCH","evt":"READY"})", exc)) {
             m_connected = false;
             return;
@@ -166,8 +196,12 @@ bool DiscordRichPresence::Connect(__int64 clientId, Exception exc) noexcept
 
 void DiscordRichPresence::Close(Exception exc) noexcept {
     if (m_connected && m_pipe != INVALID_HANDLE_VALUE) {
-        std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":1234,"activity":null},"nonce":")" + generateNonce() + R"("})";
-        sendDiscordMessageSync(1, clearActivity, exc);
+        try {
+            std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":1234,"activity":null},"nonce":")" + generateNonce() + R"("})";
+            sendDiscordMessageSync(1, clearActivity, exc);
+        } catch (...) {
+            // Ignore exceptions during cleanup
+        }
         disconnect();
     }
 }
@@ -195,13 +229,13 @@ bool DiscordRichPresence::SetPresence(const Presence& presence, Exception exc) n
     activityJson = R"({"cmd":"SET_ACTIVITY","args":{"pid":1234,"activity":{)";
 
     bool needComma = false;
-    if (presence.state.size() >= 2) {
-        activityJson += R"("state":")" + presence.state + R"(")";
+    if (presence.state.size() >= MIN_STRING_LENGTH) {
+        activityJson += R"("state":")" + escapeJsonString(presence.state) + R"(")";
         needComma = true;
     }
-    if (presence.details.size() >= 2) {
+    if (presence.details.size() >= MIN_STRING_LENGTH) {
         if (needComma) activityJson += ",";
-        activityJson += R"("details":")" + presence.details + R"(")";
+        activityJson += R"("details":")" + escapeJsonString(presence.details) + R"(")";
         needComma = true;
     }
     
@@ -222,22 +256,22 @@ bool DiscordRichPresence::SetPresence(const Presence& presence, Exception exc) n
         
         bool hasAssets = false;
         if (!presence.largeImage.empty()) {
-            activityJson += R"("large_image":")" + presence.largeImage + R"(")";
+            activityJson += R"("large_image":")" + escapeJsonString(presence.largeImage) + R"(")";
             hasAssets = true;
         }
-        if (presence.largeText.size() >= 2) {
+        if (presence.largeText.size() >= MIN_STRING_LENGTH) {
             if (hasAssets) activityJson += ",";
-            activityJson += R"("large_text":")" + presence.largeText + R"(")";
+            activityJson += R"("large_text":")" + escapeJsonString(presence.largeText) + R"(")";
             hasAssets = true;
         }
         if (!presence.smallImage.empty()) {
             if (hasAssets) activityJson += ",";
-            activityJson += R"("small_image":")" + presence.smallImage + R"(")";
+            activityJson += R"("small_image":")" + escapeJsonString(presence.smallImage) + R"(")";
             hasAssets = true;
         }
-        if (presence.smallText.size() >= 2) {
+        if (presence.smallText.size() >= MIN_STRING_LENGTH) {
             if (hasAssets) activityJson += ",";
-            activityJson += R"("small_text":")" + presence.smallText + R"(")";
+            activityJson += R"("small_text":")" + escapeJsonString(presence.smallText) + R"(")";
         }
         
         activityJson += "}";
