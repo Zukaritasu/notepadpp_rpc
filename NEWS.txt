@@ -64,4 +64,13 @@
 	This version has improved the efficiency of the rich presence
 	response time to changes in the editor and fixed some bugs in
 	the code.
+
+[Version 2.1]
+	The variable %(workspace) was included, allowing you to see the
+	current workspace where the file is being edited.
+	Other changes made:
+	- The option (hide elapsed time) was removed since Discord
+	  defined a fixed elapsed time
+	- The Discord Game SDK library (deprecated) is no longer used;
+	  the Discord IPC function is now implemented
 	
