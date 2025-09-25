@@ -14,10 +14,12 @@ struct Presence {
     std::string largeText;
     std::string smallImage;
     std::string smallText;
+	std::string repositoryUrl;
     int64_t startTime;
     int64_t endTime;
+	bool enableButtonRepository;
     
-    Presence() : startTime(0), endTime(0) {}
+    Presence() : startTime(0), endTime(0), enableButtonRepository(false) {}
 };
 
 struct DiscordIPCHeader {

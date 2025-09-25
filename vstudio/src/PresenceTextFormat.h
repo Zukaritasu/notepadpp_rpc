@@ -43,6 +43,7 @@ public:
 	void WriteFormat(std::string& buffer, const char* format) noexcept;
 	bool IsFileInfoEmpty() const noexcept;
 	const LanguageInfo& GetLanguageInfo() const noexcept;
+	const std::string& GetCurrentRepositoryUrl() const noexcept { return currentRepositoryUrl; }
 
 private:
 	struct Property
@@ -54,13 +55,16 @@ private:
 		Property& operator =(const std::string& value);
 	};
 
+	std::string currentRepositoryUrl{};
+
 	Property props[ARRAYSIZE(TOKENS)];
 	FileInfo _info{};
 	LanguageInfo _lang_info{};
 
 	void GetEditorProperty(char* buffer, int prop) noexcept;
 	bool ContainsTag(const char* format, const char* tag, size_t pos) noexcept;
-	bool SearchWorkspace(std::filesystem::path currentDir, std::string& workspace) noexcept;
+	bool SearchWorkspace(std::filesystem::path currentDir, std::string& workspace, std::string& repoUrl) noexcept;
+	void GetRepositoryUrl(const std::string& fileConfig, std::string& url) noexcept;
 	// true = upper, false = lower
 	std::string& GetStringCase(std::string& s, bool case_) noexcept;
 };

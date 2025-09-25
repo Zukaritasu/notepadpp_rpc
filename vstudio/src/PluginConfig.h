@@ -33,6 +33,7 @@ struct PluginConfig
 	bool     _lang_image;
 	bool     _elapsed_time;
 	bool     _hide_details;
+	bool     _button_repository;
 
 	PluginConfig& operator=(const PluginConfig& pg);
 };

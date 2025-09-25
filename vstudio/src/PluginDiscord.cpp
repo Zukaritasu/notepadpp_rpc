@@ -67,11 +67,13 @@ void RichPresence::Update(bool updateLook) noexcept
 	format.LoadEditorStatus();
 	mutex.Lock();
 
-	_p.details = _p.state = "";
+	_p.enableButtonRepository = config._button_repository;
+	_p.details = _p.state = _p.repositoryUrl =  "";
+
 	if (updateLook)
-	{
 		UpdateAssets();
-	}
+	if (config._button_repository)
+		_p.repositoryUrl = format.GetCurrentRepositoryUrl();
 	if (!format.IsFileInfoEmpty())
 	{
 		if (!config._hide_details)
@@ -79,6 +81,8 @@ void RichPresence::Update(bool updateLook) noexcept
 		if (!config._hide_state)
 			format.WriteFormat(_p.state, config._state_format);
 	}
+
+	std::printf(("\n > Repository: " + _p.repositoryUrl).c_str());
 
 	_drp.SetPresence(_p, [](const std::string& error) {
 		printf(" > Discord SetPresence Error: %s\n", error.c_str());

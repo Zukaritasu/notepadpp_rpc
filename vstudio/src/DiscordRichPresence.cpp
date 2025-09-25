@@ -197,7 +197,7 @@ bool DiscordRichPresence::Connect(__int64 clientId, Exception exc) noexcept
 void DiscordRichPresence::Close(Exception exc) noexcept {
     if (m_connected && m_pipe != INVALID_HANDLE_VALUE) {
         try {
-            std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":1234,"activity":null},"nonce":")" + generateNonce() + R"("})";
+            std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId()) + R"(,"activity":null},"nonce":")" + generateNonce() + R"("})";
             sendDiscordMessageSync(1, clearActivity, exc);
         } catch (...) {
             // Ignore exceptions during cleanup
@@ -226,7 +226,7 @@ bool DiscordRichPresence::SetPresence(const Presence& presence, Exception exc) n
     std::string activityJson;
     activityJson.reserve(estimatedSize);
     
-    activityJson = R"({"cmd":"SET_ACTIVITY","args":{"pid":1234,"activity":{)";
+    activityJson = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId()) + R"(,"activity":{)";
 
     bool needComma = false;
     if (presence.state.size() >= MIN_STRING_LENGTH) {
@@ -278,7 +278,15 @@ bool DiscordRichPresence::SetPresence(const Presence& presence, Exception exc) n
         needComma = true;
     }
     
+    if (presence.enableButtonRepository && !presence.repositoryUrl.empty()) {
+        if (needComma) activityJson += ",";
+        activityJson += R"("buttons":[{"label":"View Repository","url":")" + escapeJsonString(presence.repositoryUrl) + R"("}])";
+        needComma = true;
+    }
+    
     activityJson += R"(}},"nonce":")" + generateNonce() + R"("})";
+
+	// std::printf(("\n > Presence JSON: " + activityJson).c_str()); // Debug: Uncomment if needed
     
     return sendDiscordMessageSync(1, activityJson, exc);
 }

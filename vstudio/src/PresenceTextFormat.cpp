@@ -86,11 +86,12 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	char currentDir[MAX_PATH] = { '\0' };
 	GetEditorProperty(currentDir, NPPM_GETCURRENTDIRECTORY);
 
-	std::string workspace;
-	if (SearchWorkspace(currentDir, workspace))
+	std::string workspace, repoUrl;
+	if (SearchWorkspace(currentDir, workspace, repoUrl))
 		props[10] = workspace;
 	else
 		props[10] = "<unknown>";
+	currentRepositoryUrl = repoUrl;
 }
 
 void PresenceTextFormat::WriteFormat(std::string& buffer, const char* format) noexcept
@@ -151,7 +152,7 @@ bool PresenceTextFormat::ContainsTag(const char* format, const char* tag, size_t
 	return true;
 }
 
-bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::string& workspace) noexcept
+bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::string& workspace, std::string& repoUrl) noexcept
 {
 	while (!currentDir.empty())
 	{
@@ -161,6 +162,7 @@ bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::
 			workspace.find_last_of("\\") != std::string::npos ?
 				workspace = workspace.substr(workspace.find_last_of("\\/") + 1) :
 				workspace = workspace;
+			GetRepositoryUrl((currentDir / ".git" / "config").string(), repoUrl);
 			return true;
 		}
 
@@ -170,6 +172,59 @@ bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::
 			break;
 	}
 	return false;
+}
+
+void PresenceTextFormat::GetRepositoryUrl(const std::string& fileConfig, std::string& url) noexcept
+{
+	if (std::filesystem::exists(fileConfig))
+	{
+		FILE* file = nullptr;
+		fopen_s(&file, fileConfig.c_str(), "r");
+		if (file != nullptr)
+		{
+			char line[512] = { '\0' };
+			bool inRemoteOrigin = false;
+			while (fgets(line, sizeof line, file) != nullptr)
+			{
+				if (line[0] == '[')
+				{
+					inRemoteOrigin = (strstr(line, "[remote \"origin\"]") != nullptr);
+				}
+				else if (inRemoteOrigin)
+				{
+					char* pos = strstr(line, "url = ");
+					if (pos != nullptr)
+					{
+						pos += 6; // move past "url = "
+						char* end = strchr(pos, '\n');
+						if (end != nullptr) *end = '\0';
+						url = pos;
+						// Convert SSH URL to HTTPS if necessary
+						if (url.find("git@") == 0)
+						{
+							size_t colonPos = url.find(':');
+							if (colonPos != std::string::npos)
+							{
+								std::string domain = url.substr(4, colonPos - 4); // Skip "git@"
+								std::string path = url.substr(colonPos + 1);
+								url = "https://" + domain + "/" + path;
+							}
+						}
+						else if (url.find("http://") == 0)
+						{
+							url.replace(0, 7, "https://");
+						}
+						break;
+					}
+				}
+			}
+			fclose(file);
+		}
+	}
+	else
+	{
+		url.clear();
+	}
 }
 
 std::string& PresenceTextFormat::GetStringCase(std::string& s, bool case_) noexcept

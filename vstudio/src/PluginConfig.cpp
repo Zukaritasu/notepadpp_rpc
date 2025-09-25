@@ -38,13 +38,14 @@ static TCHAR* GetFileNameConfig(TCHAR* buffer, size_t size)
 
 void GetDefaultConfig(PluginConfig& config)
 {
-	config._hide_details = false;
-	config._elapsed_time = true;
-	config._enable       = true;
-	config._lang_image   = true;
-	config._hide_state   = false;
-	config._client_id    = DEF_APPLICATION_ID;
-	config._refreshTime  = DEF_REFRESH_TIME;
+	config._hide_details      = false;
+	config._elapsed_time      = true;
+	config._enable            = true;
+	config._lang_image        = true;
+	config._hide_state        = false;
+	config._client_id         = DEF_APPLICATION_ID;
+	config._refreshTime       = DEF_REFRESH_TIME;
+	config._button_repository = false;
 
 	strcpy(config._details_format, DEF_DETAILS_FORMAT);
 	strcpy(config._state_format, DEF_STATE_FORMAT);
@@ -74,13 +75,14 @@ void LoadConfig(PluginConfig& config)
 		YAML::Node __config = YAML::Load(stream);
 		stream.close();
 
-		config._hide_details = __config["hideDetails"].as<bool>(false);
-		config._elapsed_time = __config["elapsedTime"].as<bool>(true);
-		config._enable       = __config["enable"].as<bool>(true);
-		config._lang_image   = __config["langImage"].as<bool>(true);
-		config._hide_state   = __config["hideState"].as<bool>(false);
-		config._client_id    = __config["clientId"].as<__int64>(DEF_APPLICATION_ID);
-		config._refreshTime  = __config["refreshTime"].as<unsigned>(DEF_REFRESH_TIME);
+		config._hide_details      = __config["hideDetails"].as<bool>(false);
+		config._elapsed_time      = __config["elapsedTime"].as<bool>(true);
+		config._enable            = __config["enable"].as<bool>(true);
+		config._lang_image        = __config["langImage"].as<bool>(true);
+		config._hide_state        = __config["hideState"].as<bool>(false);
+		config._client_id         = __config["clientId"].as<__int64>(DEF_APPLICATION_ID);
+		config._refreshTime       = __config["refreshTime"].as<unsigned>(DEF_REFRESH_TIME);
+		config._button_repository = __config["buttonRepository"].as<bool>(false);
 
 		if (config._client_id < MIN_CLIENT_ID)
 		{
@@ -115,16 +117,17 @@ void SaveConfig(const PluginConfig& config)
 	{
 		YAML::Node node;
 
-		node["hideDetails"]     = config._hide_details;
-		node["elapsedTime"]     = config._elapsed_time;
-		node["enable"]          = config._enable;
-		node["langImage"]       = config._lang_image;
-		node["hideState"]       = config._hide_state;
-		node["clientId"]        = config._client_id;
-		node["detailsFormat"]   = config._details_format;
-		node["stateFormat"]     = config._state_format;
-		node["largeTextFormat"] = config._large_text_format;
-		node["refreshTime"]     = config._refreshTime;
+		node["hideDetails"]      = config._hide_details;
+		node["elapsedTime"]      = config._elapsed_time;
+		node["enable"]           = config._enable;
+		node["langImage"]        = config._lang_image;
+		node["hideState"]        = config._hide_state;
+		node["clientId"]         = config._client_id;
+		node["detailsFormat"]    = config._details_format;
+		node["stateFormat"]      = config._state_format;
+		node["largeTextFormat"]  = config._large_text_format;
+		node["refreshTime"]      = config._refreshTime;
+		node["buttonRepository"] = config._button_repository;
 
 		std::ofstream out(file);
 		out << node;
