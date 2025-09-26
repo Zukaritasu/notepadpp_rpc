@@ -46,6 +46,7 @@ void GetDefaultConfig(PluginConfig& config)
 	config._client_id         = DEF_APPLICATION_ID;
 	config._refreshTime       = DEF_REFRESH_TIME;
 	config._button_repository = false;
+	config._hide_if_private   = false;
 
 	strcpy(config._details_format, DEF_DETAILS_FORMAT);
 	strcpy(config._state_format, DEF_STATE_FORMAT);
@@ -83,6 +84,7 @@ void LoadConfig(PluginConfig& config)
 		config._client_id         = __config["clientId"].as<__int64>(DEF_APPLICATION_ID);
 		config._refreshTime       = __config["refreshTime"].as<unsigned>(DEF_REFRESH_TIME);
 		config._button_repository = __config["buttonRepository"].as<bool>(false);
+		config._hide_if_private   = __config["hideIfPrivate"].as<bool>(false);
 
 		if (config._client_id < MIN_CLIENT_ID)
 		{
@@ -128,6 +130,7 @@ void SaveConfig(const PluginConfig& config)
 		node["largeTextFormat"]  = config._large_text_format;
 		node["refreshTime"]      = config._refreshTime;
 		node["buttonRepository"] = config._button_repository;
+		node["hideIfPrivate"]    = config._hide_if_private;
 
 		std::ofstream out(file);
 		out << node;

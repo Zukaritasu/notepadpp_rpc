@@ -286,8 +286,6 @@ bool DiscordRichPresence::SetPresence(const Presence& presence, Exception exc) n
     
     activityJson += R"(}},"nonce":")" + generateNonce() + R"("})";
 
-	// std::printf(("\n > Presence JSON: " + activityJson).c_str()); // Debug: Uncomment if needed
-    
     return sendDiscordMessageSync(1, activityJson, exc);
 }
 

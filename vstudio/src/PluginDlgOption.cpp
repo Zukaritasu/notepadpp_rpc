@@ -73,20 +73,21 @@ static bool CreateTooltipInfo(HWND hWnd)
 	};
 
 	// Its respective tool tip is established in each control of the options window.
-	SetToolTip(IDC_EDIT_CID,          IDS_CLIENTID);
-	SetToolTip(IDC_ENABLE,            IDS_ENABLERPC);
-	SetToolTip(IDC_HIDE_STATE,        IDS_HIDE_STATE);
-	SetToolTip(IDC_SHOW_LANGICON,     IDS_SHOWLANGICON);
+	SetToolTip(IDC_EDIT_CID,           IDS_CLIENTID);
+	SetToolTip(IDC_ENABLE,             IDS_ENABLERPC);
+	SetToolTip(IDC_HIDE_STATE,         IDS_HIDE_STATE);
+	SetToolTip(IDC_SHOW_LANGICON,      IDS_SHOWLANGICON);
 	//SetToolTip(IDC_SHOW_ELAPSED_TIME, IDS_SHOWELAPSEDTIME);
-	SetToolTip(IDC_HIDE_DETAILS,      IDS_HIDE_DETAILS);
-	SetToolTip(IDC_RESET,             IDS_BTNRESET);
-	SetToolTip(IDC_VARIABLES,         IDS_ALLVARIABLESTIP);
-	SetToolTip(IDC_DETAILS,           IDS_DETAILSTIP);
-	SetToolTip(IDC_STATE,             IDS_STATETIP);
-	SetToolTip(IDC_CREATEAPP,         IDS_CREATEAPPTIP);
-	SetToolTip(IDC_LARGETEXT,         IDS_LARGETEXTTIP);
-	SetToolTip(IDC_DOC_HELP,          IDS_DOC_HELP);
-	SetToolTip(IDC_OPEN_REPOSITORY,   IDS_OPENREPOSITORY);
+	SetToolTip(IDC_HIDE_DETAILS,       IDS_HIDE_DETAILS);
+	SetToolTip(IDC_RESET,              IDS_BTNRESET);
+	SetToolTip(IDC_VARIABLES,          IDS_ALLVARIABLESTIP);
+	SetToolTip(IDC_DETAILS,            IDS_DETAILSTIP);
+	SetToolTip(IDC_STATE,              IDS_STATETIP);
+	SetToolTip(IDC_CREATEAPP,          IDS_CREATEAPPTIP);
+	SetToolTip(IDC_LARGETEXT,          IDS_LARGETEXTTIP);
+	SetToolTip(IDC_DOC_HELP,           IDS_DOC_HELP);
+	SetToolTip(IDC_OPEN_REPOSITORY,    IDS_OPENREPOSITORY);
+	SetToolTip(IDC_HIDE_PRIVATE_FILES, IDS_HIDE_PRIVATE_FILES);
 	
 	return true;
 }
@@ -156,12 +157,13 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 			check ? BST_CHECKED : BST_UNCHECKED, 0);
 	};
 
-	SetButtonCheck(IDC_ENABLE,            pConfig._enable);
-	SetButtonCheck(IDC_HIDE_STATE,        pConfig._hide_state);
-	SetButtonCheck(IDC_SHOW_LANGICON,     pConfig._lang_image);
-	SetButtonCheck(IDC_OPEN_REPOSITORY,   pConfig._button_repository);
+	SetButtonCheck(IDC_ENABLE,             pConfig._enable);
+	SetButtonCheck(IDC_HIDE_STATE,         pConfig._hide_state);
+	SetButtonCheck(IDC_SHOW_LANGICON,      pConfig._lang_image);
+	SetButtonCheck(IDC_OPEN_REPOSITORY,    pConfig._button_repository);
 	//SetButtonCheck(IDC_SHOW_ELAPSED_TIME, pConfig._elapsed_time);
-	SetButtonCheck(IDC_HIDE_DETAILS,      pConfig._hide_details);
+	SetButtonCheck(IDC_HIDE_DETAILS,       pConfig._hide_details);
+	SetButtonCheck(IDC_HIDE_PRIVATE_FILES, pConfig._hide_if_private);
 
 	// The available tags that will be displayed in the combobox
 	TCHAR* tags[] = 
@@ -264,6 +266,7 @@ static bool ProcessCommand(HWND hDlg)
 	copy._button_repository = IsButtonChecked(IDC_OPEN_REPOSITORY);
 	//copy._elapsed_time = IsButtonChecked(IDC_SHOW_ELAPSED_TIME);
 	copy._hide_details = IsButtonChecked(IDC_HIDE_DETAILS);
+	copy._hide_if_private = IsButtonChecked(IDC_HIDE_PRIVATE_FILES);
 
 	copy._refreshTime  = config._refreshTime;
 

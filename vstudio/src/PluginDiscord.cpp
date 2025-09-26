@@ -70,6 +70,21 @@ void RichPresence::Update(bool updateLook) noexcept
 	_p.enableButtonRepository = config._button_repository;
 	_p.details = _p.state = _p.repositoryUrl =  "";
 
+	// If the current file is private and the option to hide the presence
+	// when it is private is enabled, the presence will be closed
+	if (config._hide_if_private && !format.IsFileInfoEmpty() && format.IsCurrentFilePrivate())
+	{
+		_p.details = "Private File";
+		_p.smallText = _p.smallImage = "";
+		_p.largeText = NPP_NAME;
+		_p.largeImage = NPP_DEFAULTIMAGE;
+		_drp.SetPresence(_p, [](const std::string& error) {
+			printf(" > Discord SetPresence Error: %s\n", error.c_str());
+			});
+		mutex.Unlock();
+		return;
+	}
+
 	if (updateLook)
 		UpdateAssets();
 	if (config._button_repository)
@@ -81,8 +96,6 @@ void RichPresence::Update(bool updateLook) noexcept
 		if (!config._hide_state)
 			format.WriteFormat(_p.state, config._state_format);
 	}
-
-	std::printf(("\n > Repository: " + _p.repositoryUrl).c_str());
 
 	_drp.SetPresence(_p, [](const std::string& error) {
 		printf(" > Discord SetPresence Error: %s\n", error.c_str());
@@ -215,6 +228,6 @@ void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
 		::Sleep(refreshTime);
 		if (!*keepRunning)
 			break;
-		reinterpret_cast<RichPresence*>(data)->Update(false);
+		reinterpret_cast<RichPresence*>(data)->Update();
 	}
 }

@@ -21,6 +21,7 @@
 #include <cctype>
 #include <Shlwapi.h>
 #include <discord_game_sdk.h>
+#include <filesystem>
 
 #ifdef _DEBUG
 	#include <cstdio>
@@ -86,9 +87,12 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	char currentDir[MAX_PATH] = { '\0' };
 	GetEditorProperty(currentDir, NPPM_GETCURRENTDIRECTORY);
 
-	std::string workspace, repoUrl;
-	if (SearchWorkspace(currentDir, workspace, repoUrl))
+	std::string workspace, absolutePathWorkspace, repoUrl;
+	if (SearchWorkspace(currentDir, workspace, absolutePathWorkspace, repoUrl))
+	{
 		props[10] = workspace;
+		_fileFilter.LoadGitignore((std::filesystem::path(absolutePathWorkspace) / ".gitignore").string());
+	}
 	else
 		props[10] = "<unknown>";
 	currentRepositoryUrl = repoUrl;
@@ -132,6 +136,14 @@ const LanguageInfo& PresenceTextFormat::GetLanguageInfo() const noexcept
 	return _lang_info;
 }
 
+bool PresenceTextFormat::IsCurrentFilePrivate() noexcept
+{
+	char currentDir[MAX_PATH] = { '\0' };
+	GetEditorProperty(currentDir, NPPM_GETCURRENTDIRECTORY);
+	std::filesystem::path parent = currentDir;
+	return _fileFilter.IsPrivate((parent / _info.name).string());
+}
+
 void PresenceTextFormat::GetEditorProperty(char* buffer, int prop) noexcept
 {
 	buffer[0] = '\0';
@@ -152,12 +164,13 @@ bool PresenceTextFormat::ContainsTag(const char* format, const char* tag, size_t
 	return true;
 }
 
-bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::string& workspace, std::string& repoUrl) noexcept
+bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::string& workspace, std::string& absolutePathWorkspace, std::string& repoUrl) noexcept
 {
 	while (!currentDir.empty())
 	{
 		if (std::filesystem::exists(currentDir / ".git"))
 		{
+			absolutePathWorkspace = currentDir.string();
 			workspace = currentDir.string();
 			workspace.find_last_of("\\") != std::string::npos ?
 				workspace = workspace.substr(workspace.find_last_of("\\/") + 1) :
@@ -187,9 +200,7 @@ void PresenceTextFormat::GetRepositoryUrl(const std::string& fileConfig, std::st
 			while (fgets(line, sizeof line, file) != nullptr)
 			{
 				if (line[0] == '[')
-				{
 					inRemoteOrigin = (strstr(line, "[remote \"origin\"]") != nullptr);
-				}
 				else if (inRemoteOrigin)
 				{
 					char* pos = strstr(line, "url = ");
@@ -211,9 +222,7 @@ void PresenceTextFormat::GetRepositoryUrl(const std::string& fileConfig, std::st
 							}
 						}
 						else if (url.find("http://") == 0)
-						{
 							url.replace(0, 7, "https://");
-						}
 						break;
 					}
 				}

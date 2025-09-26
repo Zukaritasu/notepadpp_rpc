@@ -21,6 +21,7 @@
 #define IDS_INVALIDID                   114
 #define IDS_LARGETEXTTIP                115
 #define IDS_DOC_HELP                    116
+#define IDS_HIDE_PRIVATE_FILES          117
 #define IDC_SPIN1                       1000
 #define RPC_UPDATE_TIME                 1000
 #define DEF_REFRESH_TIME                1000
@@ -39,8 +40,9 @@
 #define IDC_LARGETEXT                   1017
 #define IDC_DOC_HELP                    1018
 #define IDC_OPEN_REPOSITORY             1019
-#define IDC_STATIC                      -1
+#define IDC_HIDE_PRIVATE_FILES          1020
 #define IDC_GROUD_ID                    -1
+#define IDC_STATIC                      -1
 
 // Next default values for new objects
 // 

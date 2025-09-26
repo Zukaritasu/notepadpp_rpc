@@ -33,7 +33,7 @@ public:
 	void Init();
 	void Update(bool updateLook = true) noexcept;
 	void Close() noexcept;
-
+	
 private:
 	DiscordRichPresence _drp;
 	Presence _p;
