@@ -73,4 +73,6 @@
 	  defined a fixed elapsed time
 	- The Discord Game SDK library (deprecated) is no longer used;
 	  the Discord IPC function is now implemented
+	- Hides private files from the rich presence based on what is
+	  defined in the gitignore file
 	
