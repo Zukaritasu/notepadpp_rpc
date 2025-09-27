@@ -62,6 +62,11 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 
 	static_assert(ARRAYSIZE(TOKENS) != 9, "TOKENS and PresenceTextFormat::props");
 
+	// Save old values to check if something changed for idle detection
+	int oldCurrentLine    = props[2],
+		oldCurrentColumn  = props[3];
+	__int64 oldFileLength = _lastFileLength;
+
 	props[0] = _info.name;
 	props[1] = _info.extension;
 
@@ -70,7 +75,7 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 
 	char file_size_buf[48] = { '\0' };
 	HWND hWnd = ::GetCurrentScintilla();
-	::StrFormatByteSize64A(::SendMessage(hWnd, SCI_GETLENGTH, 0, 0), file_size_buf, 48);
+	::StrFormatByteSize64A(_lastFileLength = ::SendMessage(hWnd, SCI_GETLENGTH, 0, 0), file_size_buf, 48);
 
 	props[4] = file_size_buf;
 	props[5] = (int)::SendMessage(hWnd, SCI_GETLINECOUNT, 0, 0) + 1;
@@ -94,8 +99,15 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 		_fileFilter.LoadGitignore((std::filesystem::path(absolutePathWorkspace) / ".gitignore").string());
 	}
 	else
-		props[10] = "<unknown>";
+	{
+		workspace = currentDir;
+		props[10] = workspace.find_last_of("\\") != std::string::npos ?
+				workspace.substr(workspace.find_last_of("\\/") + 1) :
+			workspace;
+	}
 	currentRepositoryUrl = repoUrl;
+
+	_textEditorIdle = (oldCurrentLine == (int)props[2] && oldCurrentColumn == (int)props[3] && oldFileLength == _lastFileLength);
 }
 
 void PresenceTextFormat::WriteFormat(std::string& buffer, const char* format) noexcept
@@ -168,14 +180,17 @@ bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::
 {
 	while (!currentDir.empty())
 	{
-		if (std::filesystem::exists(currentDir / ".git"))
+		bool existsGitignoreFile = std::filesystem::exists(currentDir / ".gitignore");
+		bool existsGitFolder = std::filesystem::exists(currentDir / ".git");
+		if (existsGitFolder || existsGitignoreFile)
 		{
 			absolutePathWorkspace = currentDir.string();
 			workspace = currentDir.string();
 			workspace.find_last_of("\\") != std::string::npos ?
 				workspace = workspace.substr(workspace.find_last_of("\\/") + 1) :
 				workspace = workspace;
-			GetRepositoryUrl((currentDir / ".git" / "config").string(), repoUrl);
+			if (existsGitFolder)
+				GetRepositoryUrl((currentDir / ".git" / "config").string(), repoUrl);
 			return true;
 		}
 

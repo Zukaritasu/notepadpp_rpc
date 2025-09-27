@@ -41,6 +41,7 @@ private:
 
 	BasicThread*  _callbacks = nullptr;
 	BasicThread*  _status    = nullptr;
+	BasicThread* _idleTimer  = nullptr;
 	volatile bool _active    = false;
 
 	void UpdateAssets() noexcept;
@@ -48,4 +49,5 @@ private:
 
 	static void CallBacks(void* data, volatile bool* keepRunning = nullptr) noexcept;
 	static void Status(void* data, volatile bool* keepRunning = nullptr) noexcept;
+	static void IdleTimer(void* data, volatile bool* keepRunning = nullptr) noexcept;
 };

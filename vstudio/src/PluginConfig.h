@@ -35,6 +35,8 @@ struct PluginConfig
 	bool     _hide_details;
 	bool     _button_repository;
 	bool	 _hide_if_private;
+	bool     _hide_idle_status;
+	int      _idle_time;
 
 	PluginConfig& operator=(const PluginConfig& pg);
 };

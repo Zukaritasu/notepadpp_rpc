@@ -2,6 +2,7 @@
 // Archivo de inclusión generado de Microsoft Visual C++.
 // Usado por PluginResources.rc
 //
+
 #define VS_VERSION_INFO                 1
 #define IDS_ENABLERPC                   101
 #define IDS_CLIENTID                    102
@@ -22,6 +23,7 @@
 #define IDS_LARGETEXTTIP                115
 #define IDS_DOC_HELP                    116
 #define IDS_HIDE_PRIVATE_FILES          117
+#define IDS_HIDE_IDLE_STATUS            118
 #define IDC_SPIN1                       1000
 #define RPC_UPDATE_TIME                 1000
 #define DEF_REFRESH_TIME                1000
@@ -32,6 +34,8 @@
 #define IDC_RESET                       1009
 #define IDC_SHOW_LANGICON               1010
 #define IDC_SHOW_ELAPSED_TIME           1011
+#define IDC_HIDE_STATE2                 1011
+#define IDC_HIDE_IDLE_STATUS            1011
 #define IDC_HIDE_DETAILS                1012
 #define IDC_DETAILS                     1013
 #define IDC_VARIABLES                   1014

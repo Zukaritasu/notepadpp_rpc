@@ -47,6 +47,7 @@ public:
 	const LanguageInfo& GetLanguageInfo() const noexcept;
 	const std::string& GetCurrentRepositoryUrl() const noexcept { return currentRepositoryUrl; }
 	bool IsCurrentFilePrivate() noexcept;
+	bool IsTextEditorIdle() const noexcept { return _textEditorIdle; }
 
 private:
 	struct Property
@@ -56,6 +57,10 @@ private:
 
 		Property& operator =(int value);
 		Property& operator =(const std::string& value);
+
+		operator int() const noexcept { return std::atoi(value.c_str()); }
+		operator const std::string& () const noexcept { return value; }
+		operator __int64() const noexcept { return std::atoll(value.c_str()); }
 	};
 
 	std::string currentRepositoryUrl{};
@@ -64,6 +69,8 @@ private:
 	FileInfo _info{};
 	LanguageInfo _lang_info{};
 	FileFilter _fileFilter{};
+	bool _textEditorIdle = false;
+	__int64 _lastFileLength = 0;
 
 	void GetEditorProperty(char* buffer, int prop) noexcept;
 	bool ContainsTag(const char* format, const char* tag, size_t pos) noexcept;

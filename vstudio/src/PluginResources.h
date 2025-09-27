@@ -32,6 +32,7 @@
 #define DEF_APPLICATION_ID              938157386068279366
 #define RPC_UPDATE_TIME                 1000
 #define DEF_REFRESH_TIME                1000
+#define DEF_IDLE_TIME                   300 // seconds
 
 #define MIN_CLIENT_ID                   ((__int64)1E16)
 #define MIN_LENGTH_CLIENT_ID            17

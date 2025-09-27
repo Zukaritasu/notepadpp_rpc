@@ -47,6 +47,8 @@ void GetDefaultConfig(PluginConfig& config)
 	config._refreshTime       = DEF_REFRESH_TIME;
 	config._button_repository = false;
 	config._hide_if_private   = false;
+	config._hide_idle_status  = false;
+	config._idle_time		  = DEF_IDLE_TIME;
 
 	strcpy(config._details_format, DEF_DETAILS_FORMAT);
 	strcpy(config._state_format, DEF_STATE_FORMAT);
@@ -85,6 +87,8 @@ void LoadConfig(PluginConfig& config)
 		config._refreshTime       = __config["refreshTime"].as<unsigned>(DEF_REFRESH_TIME);
 		config._button_repository = __config["buttonRepository"].as<bool>(false);
 		config._hide_if_private   = __config["hideIfPrivate"].as<bool>(false);
+		config._hide_idle_status  = __config["hideIdleStatus"].as<bool>(false);
+		config._idle_time		  = __config["idleTime"].as<int>(DEF_IDLE_TIME);
 
 		if (config._client_id < MIN_CLIENT_ID)
 		{
@@ -131,6 +135,8 @@ void SaveConfig(const PluginConfig& config)
 		node["refreshTime"]      = config._refreshTime;
 		node["buttonRepository"] = config._button_repository;
 		node["hideIfPrivate"]    = config._hide_if_private;
+		node["hideIdleStatus"]   = config._hide_idle_status;
+		node["idleTime"]		 = config._idle_time;
 
 		std::ofstream out(file);
 		out << node;

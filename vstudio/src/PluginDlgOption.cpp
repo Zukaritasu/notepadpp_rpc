@@ -88,6 +88,8 @@ static bool CreateTooltipInfo(HWND hWnd)
 	SetToolTip(IDC_DOC_HELP,           IDS_DOC_HELP);
 	SetToolTip(IDC_OPEN_REPOSITORY,    IDS_OPENREPOSITORY);
 	SetToolTip(IDC_HIDE_PRIVATE_FILES, IDS_HIDE_PRIVATE_FILES);
+	SetToolTip(IDC_HIDE_IDLE_STATUS,   IDS_HIDE_IDLE_STATUS);
+
 	
 	return true;
 }
@@ -164,6 +166,7 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	//SetButtonCheck(IDC_SHOW_ELAPSED_TIME, pConfig._elapsed_time);
 	SetButtonCheck(IDC_HIDE_DETAILS,       pConfig._hide_details);
 	SetButtonCheck(IDC_HIDE_PRIVATE_FILES, pConfig._hide_if_private);
+	SetButtonCheck(IDC_HIDE_IDLE_STATUS,   pConfig._hide_idle_status);
 
 	// The available tags that will be displayed in the combobox
 	TCHAR* tags[] = 
@@ -267,7 +270,10 @@ static bool ProcessCommand(HWND hDlg)
 	//copy._elapsed_time = IsButtonChecked(IDC_SHOW_ELAPSED_TIME);
 	copy._hide_details = IsButtonChecked(IDC_HIDE_DETAILS);
 	copy._hide_if_private = IsButtonChecked(IDC_HIDE_PRIVATE_FILES);
+	copy._hide_idle_status = IsButtonChecked(IDC_HIDE_IDLE_STATUS);
 
+
+	copy._idle_time = config._idle_time;
 	copy._refreshTime  = config._refreshTime;
 
 	// The new formats are obtained but first they are validated

@@ -16,6 +16,7 @@
 #pragma once
 
 #define NPP_DEFAULTIMAGE  "favicon"
+#define NPP_IDLEIMAGE    "idle"
 
 struct LanguageInfo
 {

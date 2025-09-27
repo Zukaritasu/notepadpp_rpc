@@ -38,6 +38,7 @@ extern PluginConfig config;
 
 BasicMutex mutex;
 volatile bool isClosed = false;
+volatile int currentIdleTime = 0;
 
 
 
@@ -50,6 +51,7 @@ void RichPresence::Init()
 		{
 			_callbacks = new BasicThread(RichPresence::CallBacks, this);
 			_status = new BasicThread(RichPresence::Status, this);
+			_idleTimer = new BasicThread(RichPresence::IdleTimer, this);
 		}
 		catch (const std::exception& exception)
 		{
@@ -69,6 +71,26 @@ void RichPresence::Update(bool updateLook) noexcept
 
 	_p.enableButtonRepository = config._button_repository;
 	_p.details = _p.state = _p.repositoryUrl =  "";
+
+	if (!format.IsTextEditorIdle())
+		currentIdleTime = 0;
+	if (currentIdleTime >= config._idle_time)
+	{
+		if (config._hide_idle_status)
+			currentIdleTime = 0;
+		else
+		{
+			_p.details = "Idle";
+			_p.smallText = _p.smallImage = "";
+			_p.largeText = NPP_NAME;
+			_p.largeImage = NPP_IDLEIMAGE;
+			_drp.SetPresence(_p, [](const std::string& error) {
+				printf(" > Discord SetPresence Error: %s\n", error.c_str());
+				});
+			mutex.Unlock();
+			return;
+		}
+	}
 
 	// If the current file is private and the option to hide the presence
 	// when it is private is enabled, the presence will be closed
@@ -131,6 +153,14 @@ void RichPresence::Close() noexcept
 		_drp.Close();
 
 		mutex.Unlock();
+	}
+
+	if (_idleTimer != nullptr)
+	{
+		_idleTimer->Stop();
+		::Sleep(60); // Give it some time to close properly
+		delete _idleTimer;
+		_idleTimer = nullptr;
 	}
 }
 
@@ -217,8 +247,6 @@ reconnect:
 	}
 }
 
-#pragma warning(disable: 4127) // while (true) const expression
-
 void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
 {
 	const unsigned refreshTime = config._refreshTime;
@@ -229,5 +257,21 @@ void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
 		if (!*keepRunning)
 			break;
 		reinterpret_cast<RichPresence*>(data)->Update();
+	}
+}
+
+void RichPresence::IdleTimer(void*, volatile bool* keepRunning) noexcept
+{
+	int milliseconds = 0;
+	while (*keepRunning)
+	{
+		// 50 ms interval for better precision and responsiveness for stopping the timer
+		milliseconds += 50;
+		if (milliseconds >= 1000)
+		{
+			currentIdleTime++;
+			milliseconds = 0;
+		}
+		::Sleep(50);
 	}
 }
