@@ -40,7 +40,7 @@ HINSTANCE    hPlugin = nullptr;
 
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ //
 
-LRESULT CALLBACK SubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+LRESULT CALLBACK SubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
 	switch (message) {
 	case WM_CLOSE:
 		rpc.Close();
@@ -63,9 +63,7 @@ void commandMenuInit()
 	SetWindowSubclass(nppData._nppHandle, SubclassProc, 29, 0);
 }
 
-void commandMenuCleanUp()
-{
-}
+void commandMenuCleanUp(){}
 
 void pluginInit(HANDLE handle)
 {
