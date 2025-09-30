@@ -4,8 +4,9 @@
 #include <string>
 #include <cstdint>
 #include <string_view>
+#include <functional>
 
-typedef void (*Exception)(const std::string& error);
+typedef std::function<void(const std::string&)> Exception;
 
 struct Presence {
     std::string state;
