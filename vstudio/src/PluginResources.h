@@ -31,6 +31,7 @@
 #define DEF_APPLICATION_ID_STR          "938157386068279366"
 #define DEF_APPLICATION_ID              938157386068279366
 #define RPC_UPDATE_TIME                 1000
+#define RPC_TIME_RECONNECTION			2000
 #define DEF_REFRESH_TIME                1000
 #define DEF_IDLE_TIME                   300 // seconds
 
