@@ -78,7 +78,7 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	::StrFormatByteSize64A(_lastFileLength = ::SendMessage(hWnd, SCI_GETLENGTH, 0, 0), file_size_buf, 48);
 
 	props[4] = file_size_buf;
-	props[5] = (int)::SendMessage(hWnd, SCI_GETLINECOUNT, 0, 0) + 1;
+	props[5] = (int)::SendMessage(hWnd, SCI_GETLINECOUNT, 0, 0);
 
 	std::string lang_name = _lang_info._name;
 
