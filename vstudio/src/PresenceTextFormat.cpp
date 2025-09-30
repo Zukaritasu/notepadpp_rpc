@@ -20,7 +20,6 @@
 
 #include <cctype>
 #include <Shlwapi.h>
-#include <discord_game_sdk.h>
 #include <filesystem>
 
 #ifdef _DEBUG
