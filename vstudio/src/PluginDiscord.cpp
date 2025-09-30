@@ -23,6 +23,10 @@
 #include <tchar.h>
 #include <time.h>
 #include <string>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <chrono>
 
 #include "PluginError.h"
 
@@ -31,16 +35,16 @@
 namespace
 {
 	const char* NPP_NAME = "Notepad++";
+
+	// Incremental counter of the time elapsed since the last idle in the code editor
+	std::atomic<int>  currentIdleTime = 0;
 }
 
 extern PluginConfig config;
+extern NppData nppData;
 
-
+// NOTE: called from the PluginDlgOption.cpp file
 BasicMutex mutex;
-volatile bool isClosed = false;
-volatile int currentIdleTime = 0;
-
-
 
 
 void RichPresence::Init()
@@ -64,7 +68,8 @@ void RichPresence::Init()
 
 void RichPresence::Update(bool updateLook) noexcept
 {
-	if (isClosed) return;
+	if (!_drp.IsConnected())
+		return;
 
 	format.LoadEditorStatus();
 	mutex.Lock();
@@ -73,20 +78,21 @@ void RichPresence::Update(bool updateLook) noexcept
 	_p.details = _p.state = _p.repositoryUrl =  "";
 
 	if (!format.IsTextEditorIdle())
-		currentIdleTime = 0;
-	if (currentIdleTime >= config._idle_time)
+		currentIdleTime.store(0);
+
+	if (currentIdleTime.load() >= config._idle_time)
 	{
 		if (config._hide_idle_status)
-			currentIdleTime = 0;
+			currentIdleTime.store(0);
 		else
 		{
 			_p.details = "Idle";
 			_p.smallText = _p.smallImage = "";
 			_p.largeText = NPP_NAME;
 			_p.largeImage = NPP_IDLEIMAGE;
-			_drp.SetPresence(_p, [](const std::string& error) {
-				printf(" > Discord SetPresence Error: %s\n", error.c_str());
-				});
+
+			_drp.SetPresence(_p);
+
 			mutex.Unlock();
 			return;
 		}
@@ -100,9 +106,8 @@ void RichPresence::Update(bool updateLook) noexcept
 		_p.smallText = _p.smallImage = "";
 		_p.largeText = NPP_NAME;
 		_p.largeImage = NPP_DEFAULTIMAGE;
-		_drp.SetPresence(_p, [](const std::string& error) {
-			printf(" > Discord SetPresence Error: %s\n", error.c_str());
-			});
+		_drp.SetPresence(_p);
+		
 		mutex.Unlock();
 		return;
 	}
@@ -119,49 +124,30 @@ void RichPresence::Update(bool updateLook) noexcept
 			format.WriteFormat(_p.state, config._state_format);
 	}
 
-	_drp.SetPresence(_p, [](const std::string& error) {
-		printf(" > Discord SetPresence Error: %s\n", error.c_str());
-	});
-	
+	_drp.SetPresence(_p);
 	mutex.Unlock();
+}
+
+static void SafeStopAndDelete(BasicThread*& thread) noexcept
+{
+	if (thread != nullptr)
+	{
+		thread->Stop();
+		thread->Wait();
+		delete thread;
+		thread = nullptr;
+	}
 }
 
 void RichPresence::Close() noexcept
 {
-	isClosed = true;
-	if (_status != nullptr)
-	{
-		mutex.Lock();
-		_status->Stop();
-		delete _status;
-		_status = nullptr;
-		mutex.Unlock();
-	}
+	mutex.Lock();
+	SafeStopAndDelete(_callbacks);
+	SafeStopAndDelete(_status);
+	SafeStopAndDelete(_idleTimer);
 
-	if (_callbacks != nullptr)
-	{
-		if (_active)
-			_callbacks->Stop();
-		else
-			_callbacks->Kill();
-
-		delete _callbacks;
-		_callbacks = nullptr;
-
-		mutex.Lock();
-
-		_drp.Close();
-
-		mutex.Unlock();
-	}
-
-	if (_idleTimer != nullptr)
-	{
-		_idleTimer->Stop();
-		::Sleep(60); // Give it some time to close properly
-		delete _idleTimer;
-		_idleTimer = nullptr;
-	}
+	_drp.Close();
+	mutex.Unlock();
 }
 
 void RichPresence::UpdateAssets() noexcept
@@ -191,69 +177,55 @@ void RichPresence::UpdateAssets() noexcept
 	}
 }
 
-void RichPresence::Connect() noexcept
+void RichPresence::Connect(volatile bool* keepRunning) noexcept
 {
-reconnect:
-	if (!_drp.Connect(config._client_id, [](const std::string& error) {
-		printf(" > Discord Connect Error: %s\n", error.c_str());
-	}))
+	while (keepRunning != nullptr && *keepRunning)
 	{
-		printf(" > Retrying connection in 2 seconds...\n");
-		::Sleep(2000);
-		goto reconnect;
+		if (_drp.Connect(config._client_id))
+			break;
+		BasicThread::Sleep(keepRunning, RPC_TIME_RECONNECTION);
 	}
 }
 
 void RichPresence::CallBacks(void* data, volatile bool* keepRunning) noexcept
 {
 	RichPresence* rpc = reinterpret_cast<RichPresence*>(data);
-	auto& drp = rpc->_drp;
-reconnect:
-	rpc->Connect();
-
-	rpc->_active = true;
-
-	auto now = std::chrono::system_clock::now();
-	auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
-	rpc->_p.startTime = timestamp;
-
-	isClosed = false;
-
-	rpc->Update();
-
-	while (rpc->_active)
+	DiscordRichPresence& drp = rpc->_drp;
+	
+	while (*keepRunning)
 	{
+		rpc->Connect(keepRunning);
 		if (!(*keepRunning))
-		{
-			rpc->_active = false;
-			break;
-		}
+			return;
 
-		mutex.Lock();
+		auto now = std::chrono::system_clock::now();
+		auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+		// Set the start time to the current time
+		rpc->_p.startTime = timestamp;
+		rpc->Update();
 
-		drp.Update([](const std::string& error) {
-			printf(" > Discord Update Error: %s\n", error.c_str());
-		});
-		if (!drp.IsConnected() || !drp.CheckConnection([](const std::string& error) {
-			printf(" > Discord Connection Error: %s\n", error.c_str());
-		}))
+		while (*keepRunning)
 		{
-			rpc->_active = false;
+			mutex.Lock();
+
+			drp.Update();
+			if (!drp.IsConnected() || !drp.CheckConnection())
+			{
+				mutex.Unlock();
+				break;
+			}
 			mutex.Unlock();
-			goto reconnect;
+			BasicThread::Sleep(keepRunning, RPC_UPDATE_TIME / 60);
 		}
-		mutex.Unlock();
-		::Sleep(RPC_UPDATE_TIME / 60);
 	}
 }
 
 void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
 {
 	const unsigned refreshTime = config._refreshTime;
-
 	while (*keepRunning)
 	{
-		::Sleep(refreshTime);
+		BasicThread::Sleep(keepRunning, refreshTime);
 		if (!*keepRunning)
 			break;
 		reinterpret_cast<RichPresence*>(data)->Update();
@@ -262,16 +234,10 @@ void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
 
 void RichPresence::IdleTimer(void*, volatile bool* keepRunning) noexcept
 {
-	int milliseconds = 0;
+	currentIdleTime.store(0);
 	while (*keepRunning)
 	{
-		// 50 ms interval for better precision and responsiveness for stopping the timer
-		milliseconds += 50;
-		if (milliseconds >= 1000)
-		{
-			currentIdleTime++;
-			milliseconds = 0;
-		}
-		::Sleep(50);
+		BasicThread::Sleep(keepRunning, 1000);
+		currentIdleTime.fetch_add(1);
 	}
 }

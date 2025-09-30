@@ -39,13 +39,12 @@ private:
 	Presence _p;
 	PresenceTextFormat format;
 
-	BasicThread*  _callbacks = nullptr;
-	BasicThread*  _status    = nullptr;
-	BasicThread* _idleTimer  = nullptr;
-	volatile bool _active    = false;
+	BasicThread*  _callbacks  = nullptr;
+	BasicThread*  _status     = nullptr;
+	BasicThread* _idleTimer   = nullptr;
 
 	void UpdateAssets() noexcept;
-	void Connect() noexcept;
+	void Connect(volatile bool* keepRunning = nullptr) noexcept;
 
 	static void CallBacks(void* data, volatile bool* keepRunning = nullptr) noexcept;
 	static void Status(void* data, volatile bool* keepRunning = nullptr) noexcept;
