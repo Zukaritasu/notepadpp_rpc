@@ -55,7 +55,7 @@ void ShowWin32LastError()
 	}
 }
 
-void ShowDiscordError(EDiscordResult result)
+/*void ShowDiscordError(EDiscordResult result)
 {
 	if (result != DiscordResult_Ok)
 	{
@@ -63,4 +63,4 @@ void ShowDiscordError(EDiscordResult result)
 		_sntprintf(buf, 128, _T("An error has occurred in Discord. Error code: %d"), static_cast<int>(result));
 		ShowErrorMessage(buf);
 	}
-}
+}*/
