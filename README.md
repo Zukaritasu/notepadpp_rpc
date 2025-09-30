@@ -41,7 +41,7 @@ There are two ways to contribute to this repository, the first is by helping in 
 To solve problems in the source code and among other things it is not necessary to follow the same syntax as the rest of the source code, you only have to comment the code and be tidy. After you have created a fork and made changes in the source code you only have to make pull request and explain what you have done... remember to test the plugin to make sure it works correctly
 
 ## Support
-If you have any problems with the plugin or have any questions about its functionality, you can join my discord server https://discord.gg/sKeKgJSz3S and go to the **#support** channel and leave your question with the following information:
+If you have any problems with the plugin or have any questions about its functionality, you can join my Discord server [ZukaDev - Server Support](https://discord.gg/sKeKgJSz3S) and go to the **#support** channel and leave your question with the following information:
 
 ```
 - What version of Windows do you have?
@@ -51,20 +51,23 @@ If you have any problems with the plugin or have any questions about its functio
 ```
 
 ## Important
-To ensure proper functionality, it is essential to have `Visual Studio 2013 (VC++ 12.0)`, as well as `Visual Studio 2015, 2017, 2019, and 2022` installed. You can find the necessary redistributable packages [here](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
+To ensure proper functionality of the plugin and its dependencies, it is recommended to have the Microsoft Visual C++ Redistributable for Visual Studio 2015–2022 installed. This unified package covers runtime components for Visual Studio 2015 (VC++ 14.0) through Visual Studio 2022 (VC++ 14.3) and ensures compatibility with builds targeting C++14, C++17, and later.
+
+If legacy support is required (e.g. for builds compiled with Visual Studio 2013 / VC++ 12.0), you should also install the Visual C++ 2013 Redistributable separately.
+
+You can find the latest supported redistributable packages on Microsoft’s official VC++ Redistributable page [Microsoft’s official VC++ Redistributable page](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
 
 
 ## Documentation
 
 * [Create Custom Rich Presence](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION.md)
+* [Plugin Configuration Documentation](https://github.com/Zukaritasu/notepadpp_rpc/blob/main/DOCUMENTATION_SETTINGS.md)
 
-## Discord SDK Information
+## Discord Information
 
-* [SDK Starter Guide](https://discord.com/developers/docs/game-sdk/sdk-starter-guide)
-* [Activities](https://discord.com/developers/docs/game-sdk/activities)
-* [How To](https://discord.com/developers/docs/rich-presence/how-to)
+* [RPC](https://discord.com:2053/developers/docs/topics/rpc)
+* [Example Set Activity Payload](https://discord.com:2053/developers/docs/topics/rpc#setactivity-example-set-activity-payload)
 
 ## Libraries used
 
-* [Discord Game SDK](https://discord.com/developers/docs/game-sdk)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp)
