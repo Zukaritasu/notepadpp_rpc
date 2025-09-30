@@ -59,20 +59,32 @@ public:
 	void Stop() {
 		*keepRunning = false;
 	}
-#pragma warning(disable: 6258)
-	void Kill() {
-		::TerminateThread(handle, 0);
-	}
-#pragma warning(default: 6258)
 
 	static void Sleep(volatile bool* keepRunning, DWORD totalMilliseconds) {
-		const DWORD interval = 500;
+		if (!keepRunning || !(*keepRunning) || totalMilliseconds == 0)
+			return;
 
-		for (DWORD elapsed = 0; elapsed < totalMilliseconds; elapsed += interval) {
-			if (keepRunning && !(*keepRunning))
-				break;
-			::Sleep(interval);
+		HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
+		if (!timer) return;
+
+		LARGE_INTEGER li{};
+		li.QuadPart = -static_cast<LONGLONG>(totalMilliseconds) * 10000;
+
+		if (!SetWaitableTimer(timer, &li, 0, NULL, NULL, FALSE)) {
+			CloseHandle(timer);
+			return;
 		}
+
+		const DWORD checkInterval = 10;
+		DWORD waited = 0;
+
+		while (waited < totalMilliseconds && *keepRunning) {
+			DWORD result = WaitForSingleObject(timer, checkInterval);
+			if (result == WAIT_OBJECT_0) break;
+			waited += checkInterval;
+		}
+
+		CloseHandle(timer);
 	}
 
 
