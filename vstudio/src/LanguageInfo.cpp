@@ -65,6 +65,7 @@ LanguageInfo GetLanguageInfo(const char* extension)
 	case L_ASM:           return { "ASSEMBLY", "assembly" };
 	case L_SQL:           return { "SQL", "sql" };
 	case L_MATLAB:        return { "MATLAB", "matlab" };
+	case L_PROPS:         return { "PROPERTIES", "properties" };
 	default:
 		if (strcmp(extension, ".gitignore") == 0)
 			return               { "GIT", "git" };
