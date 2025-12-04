@@ -66,18 +66,18 @@ void RichPresence::Init()
 	}
 }
 
-void RichPresence::Update(bool updateLook) noexcept
+void RichPresence::Update() noexcept
 {
 	if (!_drp.IsConnected())
 		return;
 
-	format.LoadEditorStatus();
+	_format.LoadEditorStatus();
 	mutex.Lock();
 
 	_p.enableButtonRepository = config._button_repository;
 	_p.details = _p.state = _p.repositoryUrl =  "";
 
-	if (!format.IsTextEditorIdle())
+	if (!_format.IsTextEditorIdle())
 		currentIdleTime.store(0);
 
 	if (currentIdleTime.load() >= config._idle_time)
@@ -100,7 +100,7 @@ void RichPresence::Update(bool updateLook) noexcept
 
 	// If the current file is private and the option to hide the presence
 	// when it is private is enabled, the presence will be closed
-	if (config._hide_if_private && !format.IsFileInfoEmpty() && format.IsCurrentFilePrivate())
+	if (config._hide_if_private && !_format.IsFileInfoEmpty() && _format.IsCurrentFilePrivate())
 	{
 		_p.details = "Private File";
 		_p.smallText = _p.smallImage = "";
@@ -112,16 +112,15 @@ void RichPresence::Update(bool updateLook) noexcept
 		return;
 	}
 
-	if (updateLook)
-		UpdateAssets();
+	UpdateAssets();
 	if (config._button_repository)
-		_p.repositoryUrl = format.GetCurrentRepositoryUrl();
-	if (!format.IsFileInfoEmpty())
+		_p.repositoryUrl = _format.GetCurrentRepositoryUrl();
+	if (!_format.IsFileInfoEmpty())
 	{
 		if (!config._hide_details)
-			format.WriteFormat(_p.details, config._details_format);
+			_format.WriteFormat(_p.details, config._details_format);
 		if (!config._hide_state)
-			format.WriteFormat(_p.state, config._state_format);
+			_format.WriteFormat(_p.state, config._state_format);
 	}
 
 	_drp.SetPresence(_p);
@@ -160,10 +159,10 @@ void RichPresence::UpdateAssets() noexcept
 		_p.largeImage = NPP_DEFAULTIMAGE;
 		_p.largeText = NPP_NAME;
 	}
-	else if (!format.IsFileInfoEmpty())
+	else if (!_format.IsFileInfoEmpty())
 	{
-		_p.largeImage = format.GetLanguageInfo()._large_image;
-		format.WriteFormat(_p.largeText, config._large_text_format);
+		_p.largeImage = _format.GetLanguageInfo()._large_image;
+		_format.WriteFormat(_p.largeText, config._large_text_format);
 		if (_p.largeImage != NPP_DEFAULTIMAGE)
 		{
 			_p.smallImage = NPP_DEFAULTIMAGE;
@@ -187,6 +186,11 @@ void RichPresence::Connect(volatile bool* keepRunning) noexcept
 	}
 }
 
+
+/////////
+// Threads --------------------------
+////////
+
 void RichPresence::CallBacks(void* data, volatile bool* keepRunning) noexcept
 {
 	RichPresence* rpc = reinterpret_cast<RichPresence*>(data);
@@ -209,7 +213,7 @@ void RichPresence::CallBacks(void* data, volatile bool* keepRunning) noexcept
 			mutex.Lock();
 
 			drp.Update();
-			if (!drp.IsConnected() || !drp.CheckConnection())
+			if (!*keepRunning || !drp.IsConnected())
 			{
 				mutex.Unlock();
 				break;

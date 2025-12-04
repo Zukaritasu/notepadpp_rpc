@@ -31,17 +31,20 @@ public:
 	RichPresence(const RichPresence&) = delete;
 
 	void Init();
-	void Update(bool updateLook = true) noexcept;
+	void Update() noexcept;
 	void Close() noexcept;
 	
 private:
 	DiscordRichPresence _drp;
-	Presence _p;
-	PresenceTextFormat format;
+	Presence            _p;
+	PresenceTextFormat  _format;
 
-	BasicThread*  _callbacks  = nullptr;
-	BasicThread*  _status     = nullptr;
-	BasicThread* _idleTimer   = nullptr;
+	// Thread that calls the Discord callbacks every few seconds
+	BasicThread*        _callbacks  = nullptr;
+	// Thread that updates the status every time there is a change
+	BasicThread*        _status     = nullptr;
+	// Thread that increments the idle time counter every second
+	BasicThread*        _idleTimer  = nullptr;
 
 	void UpdateAssets() noexcept;
 	void Connect(volatile bool* keepRunning = nullptr) noexcept;
