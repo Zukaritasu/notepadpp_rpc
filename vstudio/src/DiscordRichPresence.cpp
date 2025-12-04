@@ -68,8 +68,7 @@ std::string DiscordRichPresence::escapeJsonString(const std::string& str) const 
 bool DiscordRichPresence::connectToDiscord(__int64 clientId, Exception exc) {
     for (int i = 0; i < MAX_PIPE_ATTEMPTS; i++) {
         std::string pipeName = R"(\\?\pipe\discord-ipc-)" + std::to_string(i);
-        m_pipe = ::CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-        
+        m_pipe = ::CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (m_pipe != INVALID_HANDLE_VALUE) {
             std::string handshake = R"({"v":1,"client_id":")" + std::to_string(clientId) + R"("})";
             if (sendDiscordMessageSync(0, handshake, exc))
@@ -82,6 +81,84 @@ bool DiscordRichPresence::connectToDiscord(__int64 clientId, Exception exc) {
     return false;
 }
 
+
+namespace {
+    static constexpr DWORD PIPE_WRITE_TIMEOUT_MS = 2000;   // 2s per write op
+    static constexpr DWORD PIPE_READ_TIMEOUT_MS  = 3000;   // 3s per read op
+
+    bool writeWithTimeout(HANDLE pipe, const void* buffer, DWORD size, DWORD timeoutMs) {
+        if (pipe == INVALID_HANDLE_VALUE)
+            return false;
+
+        OVERLAPPED ov{};
+        ov.hEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+        if (!ov.hEvent)
+            return false;
+
+        DWORD written = 0;
+        BOOL ok = ::WriteFile(pipe, buffer, size, &written, &ov);
+        if (!ok) {
+            DWORD err = ::GetLastError();
+            if (err != ERROR_IO_PENDING) {
+                ::CloseHandle(ov.hEvent);
+                return false;
+            }
+
+            DWORD waitRes = ::WaitForSingleObject(ov.hEvent, timeoutMs);
+            if (waitRes != WAIT_OBJECT_0) {
+                ::CancelIo(pipe);
+                ::CloseHandle(ov.hEvent);
+                return false;
+            }
+
+            if (!::GetOverlappedResult(pipe, &ov, &written, FALSE) || written != size) {
+                ::CloseHandle(ov.hEvent);
+                return false;
+            }
+        } else if (written != size) {
+            ::CloseHandle(ov.hEvent);
+            return false;
+        }
+
+        ::CloseHandle(ov.hEvent);
+        return true;
+    }
+
+    bool readWithTimeout(HANDLE pipe, void* buffer, DWORD size, DWORD timeoutMs, DWORD& bytesReadOut) {
+        bytesReadOut = 0;
+        if (pipe == INVALID_HANDLE_VALUE)
+            return false;
+
+        OVERLAPPED ov{};
+        ov.hEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+        if (!ov.hEvent)
+            return false;
+
+        BOOL ok = ::ReadFile(pipe, buffer, size, &bytesReadOut, &ov);
+        if (!ok) {
+            DWORD err = ::GetLastError();
+            if (err != ERROR_IO_PENDING) {
+                ::CloseHandle(ov.hEvent);
+                return false;
+            }
+
+            DWORD waitRes = ::WaitForSingleObject(ov.hEvent, timeoutMs);
+            if (waitRes != WAIT_OBJECT_0) {
+                ::CancelIo(pipe);
+                ::CloseHandle(ov.hEvent);
+                return false;
+            }
+
+            if (!::GetOverlappedResult(pipe, &ov, &bytesReadOut, FALSE)) {
+                ::CloseHandle(ov.hEvent);
+                return false;
+            }
+        }
+
+        ::CloseHandle(ov.hEvent);
+        return true;
+    }
+}
 
 bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::string& json, Exception exc) const {
     if (m_pipe == INVALID_HANDLE_VALUE) {
@@ -103,26 +180,18 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
     DiscordIPCHeader header{};
     header.opcode = opcode;
     header.length = static_cast<uint32_t>(json.size());
-    
-    DWORD written;
-    if (!::WriteFile(m_pipe, &header, sizeof(header), &written, NULL) || 
-        written != sizeof(header)) {
-		if (exc) exc("Failed to write message header to pipe");
+
+    if (!writeWithTimeout(m_pipe, &header, sizeof(header), PIPE_WRITE_TIMEOUT_MS))
         return false;
-    }
-    
-    if (!::WriteFile(m_pipe, json.c_str(), static_cast<DWORD>(json.size()), &written, NULL) || 
-        written != json.size()) {
-		if (exc) exc("Failed to write message body to pipe");
+    if (!writeWithTimeout(m_pipe, json.c_str(), static_cast<DWORD>(json.size()), PIPE_WRITE_TIMEOUT_MS))
         return false;
-    }
     
     DiscordIPCHeader responseHeader{};
     DWORD bytesRead;
-    
-    if (!::ReadFile(m_pipe, &responseHeader, sizeof(responseHeader), &bytesRead, NULL) ||
+
+    if (!readWithTimeout(m_pipe, &responseHeader, sizeof(responseHeader), PIPE_READ_TIMEOUT_MS, bytesRead) ||
         bytesRead != sizeof(responseHeader)) {
-		if (exc) exc("Failed to read response header from pipe");
+        if (exc) exc("Failed to read response header from pipe");
         return false;
     }
     
@@ -134,10 +203,9 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
     if (responseHeader.length > 0) {
         std::string response;
         response.resize(responseHeader.length);
-        
-        if (!::ReadFile(m_pipe, response.data(), responseHeader.length, &bytesRead, NULL) ||
+        if (!readWithTimeout(m_pipe, response.data(), responseHeader.length, PIPE_READ_TIMEOUT_MS, bytesRead) ||
             bytesRead != responseHeader.length) {
-			if (exc) exc("Failed to read response body from pipe");
+            if (exc) exc("Failed to read response body from pipe");
             return false;
         }
 
@@ -214,9 +282,7 @@ void DiscordRichPresence::Close(Exception exc) noexcept {
         try {
             std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId()) + R"(,"activity":null},"nonce":")" + generateNonce() + R"("})";
             sendDiscordMessageSync(1, clearActivity, exc);
-        } catch (...) {
-            // Ignore exceptions during cleanup
-        }
+        } catch (...) {}
         disconnect();
     }
 }
