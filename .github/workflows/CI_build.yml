@@ -11,6 +11,8 @@ jobs:
       matrix:
         build_configuration: [Release, Debug]
         build_platform: [x64, Win32]
+
+        vcpkgCommitId: '785d9d2011b0213d5267a42167d498c17b5e8c18'
       
         vcpkg_triplet: [x64-windows, x86-windows]
         include:
@@ -26,8 +28,8 @@ jobs:
     - name: Install vcpkg Dependencies
       uses: lukka/run-vcpkg@v11
       with:
-        setupOnly: true
         vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
+        vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
 
     - name: Set VCPKG Environment Variable
       run: echo "VCPKG=${{ github.workspace }}\vcpkg-root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
