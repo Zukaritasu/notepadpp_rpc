@@ -38,6 +38,9 @@ LPTSTR GetRCString(unsigned ids)
 
 HWND GetCurrentScintilla()
 {
+	assert(nppData._nppHandle != nullptr);
+	assert(GetWindowThreadProcessId(nppData._nppHandle, nullptr) == GetCurrentThreadId());
+
 	int which = -1;
 	SendMessage(nppData._nppHandle, NPPM_GETCURRENTSCINTILLA, 0, (LPARAM)&which);
 	if (which == -1)

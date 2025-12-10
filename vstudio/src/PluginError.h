@@ -1,4 +1,4 @@
-// Copyright (C) 2022 - 2023 Zukaritasu
+// Copyright (C) 2022 - 2025 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,7 +16,8 @@
 #pragma once
 
 #include <windows.h>
+#include <string>
 
-void ShowErrorMessage(LPCTSTR message, HWND hWnd = nullptr);
+void ShowErrorMessage(std::wstring message, HWND hWnd = nullptr);
+void ShowErrorMessage(std::string message, HWND hWnd = nullptr);
 void ShowWin32LastError();
-//void ShowDiscordError(EDiscordResult result);

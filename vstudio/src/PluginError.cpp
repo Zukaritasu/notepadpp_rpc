@@ -28,13 +28,23 @@ extern NppData nppData;
 #include <tchar.h>
 #include <string>
 
-void ShowErrorMessage(LPCTSTR message, HWND hWnd)
+void ShowErrorMessage(std::wstring message, HWND hWnd)
 {
 #ifdef _DEBUG
-	_tprintf(_T(" > Error: %s\n"), message);
+	_tprintf(_T(" > Error: %s\n"), message.c_str());
 #else
-	MessageBox(hWnd != nullptr ? hWnd : nppData._nppHandle, message,
+	MessageBox(hWnd ? hWnd : nppData._nppHandle, message.c_str(),
 		_T(TITLE_MBOX_DRPC), MB_ICONERROR | MB_OK);
+#endif // _DEBUG
+}
+
+void ShowErrorMessage(std::string message, HWND hWnd)
+{
+#ifdef _DEBUG
+	printf(" > Error: %s\n", message.c_str());
+#else
+	MessageBoxA(hWnd ? hWnd : nppData._nppHandle, message.c_str(),
+		TITLE_MBOX_DRPC, MB_ICONERROR | MB_OK);
 #endif // _DEBUG
 }
 
@@ -46,7 +56,7 @@ void ShowWin32LastError()
 		LPTSTR message = nullptr;
 		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |  FORMAT_MESSAGE_ALLOCATE_BUFFER, 
 					  nullptr, code, 0, reinterpret_cast<LPTSTR>(&message), 0, nullptr);
-		if (message != nullptr)
+		if (message)
 		{
 			std::basic_string<TCHAR> msg_format(_T("An error has occurred in the plugin. Reason:\n\n"));
 			ShowErrorMessage(msg_format.append(message).c_str());
@@ -54,13 +64,3 @@ void ShowWin32LastError()
 		}
 	}
 }
-
-/*void ShowDiscordError(EDiscordResult result)
-{
-	if (result != DiscordResult_Ok)
-	{
-		TCHAR buf[128] = { '\0' };
-		_sntprintf(buf, 128, _T("An error has occurred in Discord. Error code: %d"), static_cast<int>(result));
-		ShowErrorMessage(buf);
-	}
-}*/

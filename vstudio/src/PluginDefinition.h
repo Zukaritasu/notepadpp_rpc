@@ -22,15 +22,21 @@
 const TCHAR NPP_PLUGIN_NAME[] = TEXT("Discord Rich Presence");
 const int nbFunc = 4;
 
-void pluginInit(HANDLE hModule);
-void pluginCleanUp();
-void commandMenuInit();
-void commandMenuCleanUp();
-
 bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc, 
 				ShortcutKey *sk = NULL, bool check0nInit = false);
 
-void OptionsPlugin();
+void OpenPluginOptionsDialog();
 void OpenConfigurationFile();
 void About();
-void ScintillaNotify(SCNotification *notifyCode);
+
+
+extern "C" {
+	__declspec(dllexport) void setInfo(NppData);
+	__declspec(dllexport) const TCHAR * getName();
+	__declspec(dllexport) FuncItem * getFuncsArray(int *);
+	__declspec(dllexport) void beNotified(SCNotification *);
+	__declspec(dllexport) LRESULT messageProc(UINT Message, WPARAM wParam, LPARAM lParam);
+	__declspec(dllexport) BOOL isUnicode();
+}
+
+

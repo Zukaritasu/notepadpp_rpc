@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Zukaritasu
+// Copyright (C) 2022-2025 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,9 @@
 #include "PluginDlgOption.h"
 #include "PluginDiscord.h"
 #include "PluginConfig.h"
+#include "PluginUtil.h"
+#include "TextEditorInfo.h"
+#include <vector>
 
 #ifdef _DEBUG
 #include <cstdio>
@@ -26,73 +29,62 @@
 #include <tchar.h>
 #include <shlwapi.h>
 #include <commctrl.h>
+#include <algorithm>
 #pragma comment(lib, "Comctl32.lib")
 
+#pragma warning(disable : 4100 4996)
 
-#pragma warning(disable: 4100 4996)
+////////////////////////////////////////////
 
-FuncItem     funcItem[nbFunc];
-NppData      nppData;
+FuncItem funcItem[nbFunc];
+NppData nppData;
 
 RichPresence rpc;
-PluginConfig config{};
-HINSTANCE    hPlugin = nullptr;
+ConfigManager configManager;
+HINSTANCE hPlugin = nullptr;
 
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ //
+///////////////////////////////////////////
 
-LRESULT CALLBACK SubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
-	switch (message) {
-	case WM_CLOSE:
-		rpc.Close();
-	default:
-		return DefSubclassProc(hwnd, message, wParam, lParam);
-	}
-	return 0;
-}
-
-void commandMenuInit()
+extern "C" __declspec(dllexport) void setInfo(NppData notpadPlusData)
 {
-	LoadConfig(config);
-	rpc.Init();
+	nppData = notpadPlusData;
+	
+	configManager.LoadConfig();
+	
+	setCommand(0, L"Options", OpenPluginOptionsDialog);
+	setCommand(1, nullptr, nullptr);
+	setCommand(2, L"Edit configuration file", OpenConfigurationFile);
+	setCommand(3, L"About", About);
 
-	setCommand(0, _T("Options"), OptionsPlugin);
-	setCommand(1, nullptr,       nullptr);
-	setCommand(2, _T("Edit configuration file"), OpenConfigurationFile);
-	setCommand(3, _T("About"),   About);
-
-	SetWindowSubclass(nppData._nppHandle, SubclassProc, 29, 0);
+	rpc.InitializePresence();
 }
 
-void commandMenuCleanUp(){}
-
-void pluginInit(HANDLE handle)
+extern "C" __declspec(dllexport) const TCHAR *getName()
 {
-#if defined(_DEBUG) || NPP_ENABLE_CONSOLE // Console is enabled for debugging 
-	AllocConsole();
-	freopen("CONOUT$", "w", stdout);
-
-	printf(" > The plugin has been started\n");
-#endif // _DEBUG
-	hPlugin = reinterpret_cast<HINSTANCE>(handle);
+	return NPP_PLUGIN_NAME;
 }
 
-void pluginCleanUp() {}
+extern "C" __declspec(dllexport) FuncItem *getFuncsArray(int *nbF)
+{
+	*nbF = nbFunc;
+	return funcItem;
+}
 
 bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
 				ShortcutKey *sk, bool check0nInit)
 {
-    if (index >= nbFunc)
-        return false;
+	if (index >= nbFunc)
+		return false;
 
-    if (!pFunc)
-        return false;
+	if (!pFunc)
+		return false;
 
-    lstrcpy(funcItem[index]._itemName, cmdName);
-    funcItem[index]._pFunc = pFunc;
-    funcItem[index]._init2Check = check0nInit;
-    funcItem[index]._pShKey = sk;
+	lstrcpy(funcItem[index]._itemName, cmdName);
+	funcItem[index]._pFunc = pFunc;
+	funcItem[index]._init2Check = check0nInit;
+	funcItem[index]._pShKey = sk;
 
-    return true;
+	return true;
 }
 
 void About()
@@ -101,35 +93,91 @@ void About()
 			   MB_ICONINFORMATION | MB_OK);
 }
 
-void ScintillaNotify(SCNotification* notifyCode)
+extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 {
 	switch (notifyCode->nmhdr.code)
 	{
 	case NPPN_BUFFERACTIVATED:
 	case NPPN_FILERENAMED:
 	case NPPN_LANGCHANGED:
+	case SCN_UPDATEUI:
 		rpc.Update();
+		break;
+	case NPPN_SHUTDOWN:
+		rpc.Close();
 		break;
 	default:
 		break;
 	}
 }
 
-void OptionsPlugin()
+extern "C" __declspec(dllexport) BOOL isUnicode()
+{
+	return TRUE;
+}
+
+extern "C" __declspec(dllexport) LRESULT messageProc(
+	UINT /*message*/,
+	WPARAM /*wParam*/,
+	LPARAM /*lParam*/)
+{
+	return TRUE;
+}
+
+////////////////////////////////////////////
+
+void OpenPluginOptionsDialog()
 {
 	ShowPluginDlgOption();
 }
 
 void OpenConfigurationFile()
 {
-	TCHAR strBuffer[MAX_PATH]{};
-	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)strBuffer);
-	_tcsncat(strBuffer, _T("\\" PLUGIN_CONFIG_FILENAME), MAX_PATH - lstrlen(strBuffer));
-	if (strBuffer[0] != 0)
+	auto configDir = TextEditorInfo::GetEditorTextPropertyW(NPPM_GETPLUGINSCONFIGDIR);
+	if (configDir.empty())
+		return;
+	
+	configDir.append(L"\\").append(_T(PLUGIN_CONFIG_FILENAME));
+
+	if (!PathFileExists(configDir.c_str()))
+		if (!configManager.SaveConfig()) return;
+	SendMessage(nppData._nppHandle, NPPM_DOOPEN, 0, (LPARAM)configDir.c_str());
+}
+
+////////////////////////////////////////////
+
+BOOL APIENTRY DllMain(HANDLE hModule, DWORD reasonForCall, LPVOID)
+{
+	try
 	{
-		if (!PathFileExists(strBuffer))
-			SaveConfig(config);
-		if (PathFileExists(strBuffer))
-			SendMessage(nppData._nppHandle, NPPM_DOOPEN, 0, (LPARAM)strBuffer);
+		switch (reasonForCall)
+		{
+		case DLL_PROCESS_ATTACH:
+		{
+#if defined(_DEBUG) || NPP_ENABLE_CONSOLE
+			AllocConsole();
+
+			FILE *fp = freopen("CONOUT$", "w", stdout);
+			if (!fp)
+				fprintf(stderr, "Error redirecting stdout to the console.\n");
+			printf(" > The plugin has been started\n");
+#endif // _DEBUG
+			hPlugin = reinterpret_cast<HINSTANCE>(hModule);
+		}
+		break;
+
+		case DLL_PROCESS_DETACH:
+			break;
+		case DLL_THREAD_ATTACH:
+			break;
+		case DLL_THREAD_DETACH:
+			break;
+		}
 	}
+	catch (...)
+	{
+		return FALSE;
+	}
+
+	return TRUE;
 }

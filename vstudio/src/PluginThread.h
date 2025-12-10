@@ -127,3 +127,15 @@ public:
 private:
 	CRITICAL_SECTION criticalSection;
 };
+
+class AutoUnlock {
+public:
+	AutoUnlock(BasicMutex& mutex) : mutex(mutex) {
+		mutex.Lock();
+	}
+	~AutoUnlock() {
+		mutex.Unlock();
+	}
+private:
+	BasicMutex& mutex;
+};

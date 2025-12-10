@@ -17,6 +17,7 @@
 #include "PluginResources.h"
 #include "PluginDefinition.h"
 #include "PluginError.h"
+#include "PluginUtil.h"
 
 #include <windows.h>
 #include <shlwapi.h>
@@ -29,14 +30,13 @@
 
 extern NppData nppData;
 
-static TCHAR* GetFileNameConfig(TCHAR* buffer, size_t size)
+PluginConfig& PluginConfig::operator=(const PluginConfig& pg)
 {
-	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, size, (LPARAM)buffer);
-	_tcsncat(buffer, _T("\\" PLUGIN_CONFIG_FILENAME), size);
-	return buffer;
+	memcpy(this, &pg, sizeof(PluginConfig));
+	return *this;
 }
 
-void GetDefaultConfig(PluginConfig& config)
+void ConfigManager::LoadDefaultConfig(PluginConfig& config)
 {
 	config._hide_details      = false;
 	config._elapsed_time      = true;
@@ -48,108 +48,147 @@ void GetDefaultConfig(PluginConfig& config)
 	config._button_repository = false;
 	config._hide_if_private   = false;
 	config._hide_idle_status  = false;
-	config._idle_time		  = DEF_IDLE_TIME;
+	config._idle_time         = DEF_IDLE_TIME;
 
-	strcpy(config._details_format, DEF_DETAILS_FORMAT);
-	strcpy(config._state_format, DEF_STATE_FORMAT);
-	strcpy(config._large_text_format, DEF_LARGE_TEXT_FORMAT);
+	strncpy(config._details_format, DEF_DETAILS_FORMAT, MAX_FORMAT_BUF - 1);
+	strncpy(config._state_format, DEF_STATE_FORMAT, MAX_FORMAT_BUF - 1);
+	strncpy(config._large_text_format, DEF_LARGE_TEXT_FORMAT, MAX_FORMAT_BUF - 1);
 }
 
-void ShowIOException(const std::string& desc, const std::exception& e)
+PluginConfig ConfigManager::GetConfig() noexcept
 {
-	std::string message = desc + ". " + e.what();
-	MessageBoxA(nppData._nppHandle, message.c_str(), TITLE_MBOX_DRPC, MB_OK | MB_ICONERROR);
+	AutoUnlock lock(m_mutex);
+	return m_config;
 }
 
-void LoadConfig(PluginConfig& config)
+bool ConfigManager::SetConfig(const PluginConfig& newConfig, bool save) noexcept
 {
-	TCHAR file[MAX_PATH] = { _T('\0') };
-	GetFileNameConfig(file, MAX_PATH);
+	AutoUnlock lock(m_mutex);
+	m_config = newConfig;
 
-	if (!PathFileExists(file))
+	if (save) return SaveConfig();
+	return true;
+}
+
+void ConfigManager::LoadConfig()
+{
+	AutoUnlock lock(m_mutex);
+
+	std::wstring configPath = GetConfigFilePath();
+
+	if (!PathFileExists(configPath.c_str()))
 	{
-		GetDefaultConfig(config);
+		LoadDefaultConfig(m_config);
 		return;
 	}
 
-	try
+	std::ifstream stream(configPath);
+	if (!stream.is_open())
+		throw std::runtime_error("The file does not exist or could not be opened: " PLUGIN_CONFIG_FILENAME);
+
+	YAML::Node config = YAML::Load(stream);
+	stream.close();
+
+	if (!config.IsDefined() || config.IsNull())
+		throw std::runtime_error("The configuration file format is invalid: " PLUGIN_CONFIG_FILENAME);
+
+	m_config._hide_details      = config["hideDetails"].as<bool>(false);
+	m_config._elapsed_time      = config["elapsedTime"].as<bool>(true);
+	m_config._enable            = config["enable"].as<bool>(true);
+	m_config._lang_image        = config["langImage"].as<bool>(true);
+	m_config._hide_state        = config["hideState"].as<bool>(false);
+	m_config._client_id         = config["clientId"].as<__int64>(DEF_APPLICATION_ID);
+	m_config._refreshTime       = config["refreshTime"].as<unsigned>(DEF_REFRESH_TIME);
+	m_config._button_repository = config["buttonRepository"].as<bool>(false);
+	m_config._hide_if_private   = config["hideIfPrivate"].as<bool>(false);
+	m_config._hide_idle_status  = config["hideIdleStatus"].as<bool>(false);
+	m_config._idle_time         = config["idleTime"].as<int>(DEF_IDLE_TIME);
+
+	if (m_config._client_id < MIN_CLIENT_ID)
 	{
-		std::ifstream stream(file);
-		YAML::Node __config = YAML::Load(stream);
-		stream.close();
-
-		config._hide_details      = __config["hideDetails"].as<bool>(false);
-		config._elapsed_time      = __config["elapsedTime"].as<bool>(true);
-		config._enable            = __config["enable"].as<bool>(true);
-		config._lang_image        = __config["langImage"].as<bool>(true);
-		config._hide_state        = __config["hideState"].as<bool>(false);
-		config._client_id         = __config["clientId"].as<__int64>(DEF_APPLICATION_ID);
-		config._refreshTime       = __config["refreshTime"].as<unsigned>(DEF_REFRESH_TIME);
-		config._button_repository = __config["buttonRepository"].as<bool>(false);
-		config._hide_if_private   = __config["hideIfPrivate"].as<bool>(false);
-		config._hide_idle_status  = __config["hideIdleStatus"].as<bool>(false);
-		config._idle_time		  = __config["idleTime"].as<int>(DEF_IDLE_TIME);
-
-		if (config._client_id < MIN_CLIENT_ID)
-		{
-			config._client_id = DEF_APPLICATION_ID;
-		}
-
-		if (config._refreshTime < (RPC_UPDATE_TIME / 60))
-		{
-			config._refreshTime = DEF_REFRESH_TIME;
-		}
-
-		strncpy(config._details_format, 
-			__config["detailsFormat"].as<std::string>(DEF_DETAILS_FORMAT).c_str(), MAX_FORMAT_BUF);
-		strncpy(config._state_format, 
-			__config["stateFormat"].as<std::string>(DEF_STATE_FORMAT).c_str(), MAX_FORMAT_BUF);
-		strncpy(config._large_text_format, 
-			__config["largeTextFormat"].as<std::string>(DEF_LARGE_TEXT_FORMAT).c_str(), MAX_FORMAT_BUF);
+		m_config._client_id = DEF_APPLICATION_ID;
 	}
-	catch (const std::exception& e)
+
+	if (m_config._refreshTime < RPC_UPDATE_TIME)
 	{
-		ShowIOException("Configuration file read error", e);
-		GetDefaultConfig(config);
+		m_config._refreshTime = DEF_REFRESH_TIME;
 	}
+
+	strncpy(m_config._details_format,
+		config["detailsFormat"].as<std::string>(DEF_DETAILS_FORMAT).c_str(), MAX_FORMAT_BUF - 1);
+	strncpy(m_config._state_format,
+		config["stateFormat"].as<std::string>(DEF_STATE_FORMAT).c_str(), MAX_FORMAT_BUF - 1);
+	strncpy(m_config._large_text_format,
+		config["largeTextFormat"].as<std::string>(DEF_LARGE_TEXT_FORMAT).c_str(), MAX_FORMAT_BUF - 1);
 }
 
-void SaveConfig(const PluginConfig& config)
+bool ConfigManager::SaveConfig()
 {
-	TCHAR file[MAX_PATH] = { 0 };
-	GetFileNameConfig(file, MAX_PATH);
+	AutoUnlock lock(m_mutex);
 
 	try
 	{
+		std::wstring configPath;
+
+		try
+		{
+			configPath = GetConfigFilePath();
+		}
+		catch (const std::exception& e)
+		{
+			ShowErrorMessage(std::string("Error getting the configuration file path. ") + e.what());
+			return false;
+		}
+
 		YAML::Node node;
 
-		node["hideDetails"]      = config._hide_details;
-		node["elapsedTime"]      = config._elapsed_time;
-		node["enable"]           = config._enable;
-		node["langImage"]        = config._lang_image;
-		node["hideState"]        = config._hide_state;
-		node["clientId"]         = config._client_id;
-		node["detailsFormat"]    = config._details_format;
-		node["stateFormat"]      = config._state_format;
-		node["largeTextFormat"]  = config._large_text_format;
-		node["refreshTime"]      = config._refreshTime;
-		node["buttonRepository"] = config._button_repository;
-		node["hideIfPrivate"]    = config._hide_if_private;
-		node["hideIdleStatus"]   = config._hide_idle_status;
-		node["idleTime"]		 = config._idle_time;
+		node["hideDetails"]      = m_config._hide_details;
+		node["elapsedTime"]      = m_config._elapsed_time;
+		node["enable"]           = m_config._enable;
+		node["langImage"]        = m_config._lang_image;
+		node["hideState"]        = m_config._hide_state;
+		node["clientId"]         = m_config._client_id;
+		node["detailsFormat"]    = m_config._details_format;
+		node["stateFormat"]      = m_config._state_format;
+		node["largeTextFormat"]  = m_config._large_text_format;
+		node["refreshTime"]      = m_config._refreshTime;
+		node["buttonRepository"] = m_config._button_repository;
+		node["hideIfPrivate"]    = m_config._hide_if_private;
+		node["hideIdleStatus"]   = m_config._hide_idle_status;
+		node["idleTime"]         = m_config._idle_time;
 
-		std::ofstream out(file);
+		std::ofstream out(configPath);
 		out << node;
 		out.close();
+
+		return true;
 	}
 	catch (const std::exception& e)
 	{
-		ShowIOException("Error writing to the configuration file", e);
+		ShowErrorMessage(std::string("Error writing to the configuration file. ") + e.what());
 	}
+
+	return false;
 }
 
-PluginConfig& PluginConfig::operator=(const PluginConfig& pg)
+std::wstring ConfigManager::GetConfigFilePath()
 {
-	memcpy(this, &pg, sizeof(PluginConfig));
-	return *this;
+	const size_t requiredLength = SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, 0, NULL);
+	if (requiredLength == 0)
+		throw std::runtime_error("Failed to get plugin config directory.");
+
+	std::wstring configDir;
+	configDir.resize(requiredLength);
+
+	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, requiredLength + 1, (LPARAM)configDir.data());
+	configDir.append(L"\\").append(_T(PLUGIN_CONFIG_FILENAME));
+	return configDir;
+}
+
+PluginConfig ConfigManager::GetDefaultConfig()
+{
+	PluginConfig config;
+	LoadDefaultConfig(config);
+
+	return config;
 }

@@ -19,6 +19,7 @@
 #include "PluginDiscord.h"
 #include "PluginUtil.h"
 #include "PluginThread.h"
+#include "PluginConfig.h"
 
 #include <string>
 #include <CommCtrl.h>
@@ -38,7 +39,7 @@
 
 extern NppData      nppData;
 extern HINSTANCE    hPlugin;
-extern PluginConfig config;
+extern ConfigManager configManager;
 
 static bool CreateTooltipInfo(HWND hWnd)
 {
@@ -215,13 +216,14 @@ static bool GetEditTextField(HWND hWnd, char* buffer /* length 128 */,
 {
 	int count = GetWindowTextLength(GetDlgItem(hWnd, id));
 	if (count == 0)
-		strcpy(buffer, default_value);
+		snprintf(buffer, MAX_FORMAT_BUF, "%s", default_value);
 	else
 	{
 		std::basic_string<TCHAR> text(++count, _T('\0'));
 		GetDlgItemText(hWnd, id, &text[0], count);
-		text.resize(count - 1);
-#ifdef UNICODE
+		text.resize(static_cast<std::basic_string<wchar_t, std::char_traits<wchar_t>, 
+			std::allocator<wchar_t>>::size_type>(count) - 1);
+
 		for (auto c : text)
 		{
 			if (c > 255)
@@ -230,23 +232,18 @@ static bool GetEditTextField(HWND hWnd, char* buffer /* length 128 */,
 				return false;
 			}
 		}
-#endif // UNICODE
+
 		if ((text = StringTrim(text)).empty())
 		{
 			MessageBoxA(hWnd, empty, "", MB_OK | MB_ICONWARNING);
 			return false;
 		}
-#ifdef UNICODE
 		WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, buffer, 128, nullptr, FALSE);
-#else
-		strcpy(buffer, text.c_str());
-#endif // UNICODE
 	}
 
 	return true;
 }
 
-extern BasicMutex mutex;
 extern RichPresence rpc;
 
 static bool ProcessCommand(HWND hDlg)
@@ -267,11 +264,11 @@ static bool ProcessCommand(HWND hDlg)
 	copy._hide_state   = IsButtonChecked(IDC_HIDE_STATE);
 	copy._lang_image   = IsButtonChecked(IDC_SHOW_LANGICON);
 	copy._button_repository = IsButtonChecked(IDC_OPEN_REPOSITORY);
-	//copy._elapsed_time = IsButtonChecked(IDC_SHOW_ELAPSED_TIME);
 	copy._hide_details = IsButtonChecked(IDC_HIDE_DETAILS);
 	copy._hide_if_private = IsButtonChecked(IDC_HIDE_PRIVATE_FILES);
 	copy._hide_idle_status = IsButtonChecked(IDC_HIDE_IDLE_STATUS);
 
+	const PluginConfig config = configManager.GetConfig();
 
 	copy._idle_time = config._idle_time;
 	copy._refreshTime  = config._refreshTime;
@@ -286,24 +283,21 @@ static bool ProcessCommand(HWND hDlg)
 
 	if (memcmp(&copy, &config, sizeof(PluginConfig)) != 0)
 	{
-		__int64 oldAppID = config._client_id;
-		// is locked in case Notepad++ opens a file while the configuration is being copied
-		mutex.Lock();
-		config = copy;
-		mutex.Unlock();
+		if (!configManager.SetConfig(copy, true))
+			return false;
+
 		if (!copy._enable)
 			rpc.Close();
 		else
 		{
-			// If the new ID is different from the previous one, then the presence is
-			// closed and a new one is created with the new ID
-			if (oldAppID != client_id)
-				rpc.Close();
-			rpc.Init();
+			if (client_id != config._client_id)
+			{
+				MessageBox(hDlg, _T("For the new application ID to work, you must close and reopen Notepad++"), NULL, 0);
+			}
+
+			rpc.InitializePresence();
 			rpc.Update();
 		}
-
-		SaveConfig(copy);
 	}
 	return true;
 }
@@ -314,7 +308,7 @@ static INT_PTR CALLBACK OptionsProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 	{
 	case WM_INITDIALOG:
 	{
-		if (!InitializeControls(hDlg, config))
+		if (!InitializeControls(hDlg, configManager.GetConfig()))
 			EndDialog(hDlg, FALSE);
 		return TRUE;
 	}
@@ -354,10 +348,7 @@ static INT_PTR CALLBACK OptionsProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 					break;
 				}
 ;
-				// The default configuration is assigned
-				PluginConfig cfg;
-				GetDefaultConfig(cfg);
-				InitializeControls(hDlg, cfg, false);
+				InitializeControls(hDlg, ConfigManager::GetDefaultConfig(), false);
 				break;
 			}
 		}

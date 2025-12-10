@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "PresenceTextFormat.h"
+#include "TextEditorInfo.h"
 #include "PluginInterface.h"
 #include "StringBuilder.h"
 #include "PluginUtil.h"
@@ -31,21 +31,21 @@
 
 extern NppData nppData;
 
-PresenceTextFormat::Property& 
-PresenceTextFormat::Property::operator =(int value)
+TextEditorInfo::Property& 
+TextEditorInfo::Property::operator =(int value)
 {
 	this->value = std::to_string(value);
 	return *this;
 }
 
-PresenceTextFormat::Property& 
-PresenceTextFormat::Property::operator =(const std::string& value)
+TextEditorInfo::Property& 
+TextEditorInfo::Property::operator =(const std::string& value)
 {
 	this->value = value;
 	return *this;
 }
 
-PresenceTextFormat::PresenceTextFormat()
+TextEditorInfo::TextEditorInfo()
 {
 	for (size_t i = 0; i < ARRAYSIZE(TOKENS); i++)
 	{
@@ -53,13 +53,24 @@ PresenceTextFormat::PresenceTextFormat()
 	}
 }
 
-void PresenceTextFormat::LoadEditorStatus() noexcept
+void TextEditorInfo::LoadEditorStatus() noexcept
 {
-	GetEditorProperty(_info.name, NPPM_GETFILENAME);
-	GetEditorProperty(_info.extension, NPPM_GETEXTPART);
-	_lang_info = ::GetLanguageInfo(strlwr(_info.extension));
-
 	static_assert(ARRAYSIZE(TOKENS) != 9, "TOKENS and PresenceTextFormat::props");
+
+	HWND hWndScin = ::GetCurrentScintilla();
+	if (!hWndScin) return;
+
+	_info.name = GetEditorTextProperty(NPPM_GETFILENAME);
+	_info.extension = GetEditorTextProperty(NPPM_GETEXTPART);
+
+	std::string lowerExtension = _info.extension;
+
+	std::transform(lowerExtension.begin(), lowerExtension.end(), lowerExtension.begin(),
+		[](unsigned char c){
+			return static_cast<char>(std::tolower(c));
+		});
+	
+	_lang_info = ::GetLanguageInfo(lowerExtension.c_str());
 
 	// Save old values to check if something changed for idle detection
 	int oldCurrentLine    = props[2],
@@ -69,29 +80,26 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	props[0] = _info.name;
 	props[1] = _info.extension;
 
-	props[2] = (int)::SendMessage(nppData._nppHandle, NPPM_GETCURRENTLINE, 0, 0) + 1;
-	props[3] = (int)::SendMessage(nppData._nppHandle, NPPM_GETCURRENTCOLUMN, 0, 0) + 1;
+	props[2] = static_cast<int>(SendMessage(nppData._nppHandle, NPPM_GETCURRENTLINE, 0, 0)) + 1;
+	props[3] = static_cast<int>(SendMessage(nppData._nppHandle, NPPM_GETCURRENTCOLUMN, 0, 0)) + 1;
 
-	char file_size_buf[48] = { '\0' };
-	HWND hWnd = ::GetCurrentScintilla();
-	::StrFormatByteSize64A(_lastFileLength = ::SendMessage(hWnd, SCI_GETLENGTH, 0, 0), file_size_buf, 48);
+	props[4] = GetFormattedCurrentFileSize(hWndScin, &_lastFileLength);
+	props[5] = static_cast<int>(SendMessage(hWndScin, SCI_GETLINECOUNT, 0, 0));
 
-	props[4] = file_size_buf;
-	props[5] = (int)::SendMessage(hWnd, SCI_GETLINECOUNT, 0, 0);
+	std::string langName = _lang_info._name;
 
-	std::string lang_name = _lang_info._name;
+	props[6] = GetStringCase(langName, false); // lower case
 
-	props[6] = GetStringCase(lang_name, false); // lower case
+	langName[0] = (char)std::toupper(langName[0]);
+	props[7] = langName; // first letter in upper case
+	props[8] = GetStringCase(langName, true); // upper case
 
-	lang_name[0] = (char)std::toupper(lang_name[0]);
-	props[7] = lang_name; // first letter in upper case
-	props[8] = GetStringCase(lang_name, true); // upper case
-	props[9] = static_cast<int>(::SendMessage(hWnd, SCI_GETCURRENTPOS, 0, 0) + 1L);
+	props[9] = static_cast<int>(::SendMessage(hWndScin, SCI_GETCURRENTPOS, 0, 0) + 1L);
 	
-	char currentDir[MAX_PATH] = { '\0' };
-	GetEditorProperty(currentDir, NPPM_GETCURRENTDIRECTORY);
-
+	// Determine workspace
+	std::string currentDir = GetEditorTextProperty(NPPM_GETCURRENTDIRECTORY);
 	std::string workspace, absolutePathWorkspace, repoUrl;
+
 	if (SearchWorkspace(currentDir, workspace, absolutePathWorkspace, repoUrl))
 	{
 		props[10] = workspace;
@@ -109,7 +117,7 @@ void PresenceTextFormat::LoadEditorStatus() noexcept
 	_textEditorIdle = (oldCurrentLine == (int)props[2] && oldCurrentColumn == (int)props[3] && oldFileLength == _lastFileLength);
 }
 
-void PresenceTextFormat::WriteFormat(std::string& buffer, const char* format) noexcept
+void TextEditorInfo::WriteFormat(std::string& buffer, const char* format) noexcept
 {
 	char buf[128] = { '\0' };
 	StringBuilder builder(buf, sizeof buf);
@@ -137,37 +145,23 @@ void PresenceTextFormat::WriteFormat(std::string& buffer, const char* format) no
 	buffer = buf;
 }
 
-bool PresenceTextFormat::IsFileInfoEmpty() const noexcept
+bool TextEditorInfo::IsFileInfoEmpty() const noexcept
 {
 	return _info.name[0] == '\0';
 }
 
-const LanguageInfo& PresenceTextFormat::GetLanguageInfo() const noexcept
+const LanguageInfo& TextEditorInfo::GetLanguageInfo() const noexcept
 {
 	return _lang_info;
 }
 
-bool PresenceTextFormat::IsCurrentFilePrivate() noexcept
+bool TextEditorInfo::IsCurrentFilePrivate() noexcept
 {
-	char currentDir[MAX_PATH] = { '\0' };
-	GetEditorProperty(currentDir, NPPM_GETCURRENTDIRECTORY);
-	std::filesystem::path parent = currentDir;
+	std::filesystem::path parent = GetEditorTextProperty(NPPM_GETCURRENTDIRECTORY);
 	return _fileFilter.IsPrivate((parent / _info.name).string());
 }
 
-void PresenceTextFormat::GetEditorProperty(char* buffer, int prop) noexcept
-{
-	buffer[0] = '\0';
-#ifndef UNICODE
-	::SendMessage(nppData._nppHandle, prop, MAX_PATH, reinterpret_cast<LPARAM>(buffer));
-#else
-	wchar_t wbuffer[MAX_PATH] = { L'\0' };
-	::SendMessage(nppData._nppHandle, prop, MAX_PATH, reinterpret_cast<LPARAM>(wbuffer));
-	::WideCharToMultiByte(CP_UTF8, 0, wbuffer, -1, buffer, MAX_PATH, nullptr, FALSE);
-#endif // UNICODE
-}
-
-bool PresenceTextFormat::ContainsTag(const char* format, const char* tag, size_t pos) noexcept
+bool TextEditorInfo::ContainsTag(const char* format, const char* tag, size_t pos) noexcept
 {
 	for (size_t i = 0; tag[i] != '\0'; i++)
 		if (format[pos] == '\0' || format[pos++] != tag[i])
@@ -175,7 +169,7 @@ bool PresenceTextFormat::ContainsTag(const char* format, const char* tag, size_t
 	return true;
 }
 
-bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::string& workspace, std::string& absolutePathWorkspace, std::string& repoUrl) noexcept
+bool TextEditorInfo::SearchWorkspace(std::filesystem::path currentDir, std::string& workspace, std::string& absolutePathWorkspace, std::string& repoUrl) noexcept
 {
 	while (!currentDir.empty())
 	{
@@ -201,7 +195,7 @@ bool PresenceTextFormat::SearchWorkspace(std::filesystem::path currentDir, std::
 	return false;
 }
 
-void PresenceTextFormat::GetRepositoryUrl(const std::string& fileConfig, std::string& url) noexcept
+void TextEditorInfo::GetRepositoryUrl(const std::string& fileConfig, std::string& url) noexcept
 {
 	if (std::filesystem::exists(fileConfig))
 	{
@@ -250,9 +244,88 @@ void PresenceTextFormat::GetRepositoryUrl(const std::string& fileConfig, std::st
 	}
 }
 
-std::string& PresenceTextFormat::GetStringCase(std::string& s, bool case_) noexcept
+std::string& TextEditorInfo::GetStringCase(std::string& s, bool case_) noexcept
 {
 	for (char& c : s)
 		c = case_ ? (char)std::toupper(c) : (char)std::tolower(c);
 	return s;
+}
+
+std::wstring TextEditorInfo::GetEditorTextPropertyW(int prop)
+{
+	std::wstring buffer;
+
+	size_t bufferSize = MAX_PATH;
+	buffer.resize(bufferSize);
+
+	while (true)
+	{
+		// The SendMessage function with text messages returns FALSE if the buffer
+		// size is too small or TRUE if the task was performed correctly.
+		if (SendMessage(nppData._nppHandle, prop, static_cast<WPARAM>(bufferSize), reinterpret_cast<LPARAM>(buffer.data())))
+		{
+			const size_t length = buffer.find(L'\0');
+
+			if (length != std::wstring::npos)
+				buffer.resize(length);
+			break;
+		}
+
+		bufferSize *= 2;
+		if (bufferSize > 1048576) // safety cap (1 MiB)
+			throw std::bad_alloc();
+		buffer.resize(bufferSize);
+	}
+
+	return buffer;
+}
+
+std::string TextEditorInfo::GetEditorTextProperty(int prop)
+{
+	std::string buffer;
+
+	size_t bufferSize = MAX_PATH;
+	std::vector<wchar_t> wbuffer;
+	wbuffer.resize(bufferSize);
+
+	while (true)
+	{
+		// The SendMessage function with text messages returns FALSE if the buffer
+		// size is too small or TRUE if the task was performed correctly.
+		if (SendMessage(nppData._nppHandle, prop, static_cast<WPARAM>(bufferSize), reinterpret_cast<LPARAM>(wbuffer.data())))
+		{
+			int cbRequired = WideCharToMultiByte(CP_UTF8, 0, wbuffer.data(), -1,
+				NULL, 0, NULL, FALSE);
+			if (cbRequired > 0)
+			{
+				// Resize the buffer to the required size minus one for the null terminator
+				buffer.resize(cbRequired - 1);
+				WideCharToMultiByte(CP_UTF8, 0, wbuffer.data(), -1, buffer.data(),
+					cbRequired, nullptr, FALSE);
+			}
+			break;
+		}
+
+		// If we are here, it means that the buffer was too small, so we double it
+		// and try again.
+		bufferSize *= 2;
+		if (bufferSize > 1048576) // safety cap (1 MiB)
+			throw std::bad_alloc();
+		wbuffer.resize(bufferSize);
+	}
+
+	return buffer;
+}
+
+std::string TextEditorInfo::GetFormattedCurrentFileSize(HWND hWndScin, int64_t* fileSize)
+{
+	char sizeFormattedBuf[48] = { '\0' };
+	int64_t fileSizeLocal = 0;
+
+	StrFormatByteSize64A(fileSizeLocal = ::SendMessage(hWndScin, SCI_GETLENGTH, 0, 0),
+		sizeFormattedBuf, 48);
+
+	if (fileSize)
+		*fileSize = fileSizeLocal;
+	return std::string(sizeFormattedBuf);
 }

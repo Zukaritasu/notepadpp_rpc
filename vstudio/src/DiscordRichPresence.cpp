@@ -20,7 +20,11 @@
 #include <random>
 
 DiscordRichPresence::DiscordRichPresence()  noexcept
-    : m_pipe(INVALID_HANDLE_VALUE), m_connected(false), m_pingCounter(0) { }
+    : m_pipe(INVALID_HANDLE_VALUE), m_connected(false), m_pingCounter(0)
+{
+    m_lastUpdateTime.store(std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count());
+}
 
 DiscordRichPresence::~DiscordRichPresence() {
     Close();
@@ -71,8 +75,10 @@ bool DiscordRichPresence::connectToDiscord(__int64 clientId, Exception exc) {
         m_pipe = ::CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (m_pipe != INVALID_HANDLE_VALUE) {
             std::string handshake = R"({"v":1,"client_id":")" + std::to_string(clientId) + R"("})";
-            if (sendDiscordMessageSync(0, handshake, exc))
+            if (sendDiscordMessageSync(0, handshake, exc)) {
                 return true;
+            }
+
             ::CloseHandle(m_pipe);
             m_pipe = INVALID_HANDLE_VALUE;
         }
@@ -86,6 +92,14 @@ namespace {
     static constexpr DWORD PIPE_WRITE_TIMEOUT_MS = 2000;   // 2s per write op
     static constexpr DWORD PIPE_READ_TIMEOUT_MS  = 3000;   // 3s per read op
 
+    struct HandleDeleter {
+        void operator()(HANDLE h) const {
+            if (h != NULL && h != INVALID_HANDLE_VALUE) ::CloseHandle(h);
+        }
+    };
+
+    using UniqueHandle = std::unique_ptr<void, HandleDeleter>;
+
     bool writeWithTimeout(HANDLE pipe, const void* buffer, DWORD size, DWORD timeoutMs) {
         if (pipe == INVALID_HANDLE_VALUE)
             return false;
@@ -95,32 +109,29 @@ namespace {
         if (!ov.hEvent)
             return false;
 
+        UniqueHandle ovHandle(ov.hEvent);
+        
         DWORD written = 0;
         BOOL ok = ::WriteFile(pipe, buffer, size, &written, &ov);
         if (!ok) {
             DWORD err = ::GetLastError();
             if (err != ERROR_IO_PENDING) {
-                ::CloseHandle(ov.hEvent);
                 return false;
             }
 
             DWORD waitRes = ::WaitForSingleObject(ov.hEvent, timeoutMs);
             if (waitRes != WAIT_OBJECT_0) {
                 ::CancelIo(pipe);
-                ::CloseHandle(ov.hEvent);
                 return false;
             }
 
             if (!::GetOverlappedResult(pipe, &ov, &written, FALSE) || written != size) {
-                ::CloseHandle(ov.hEvent);
                 return false;
             }
         } else if (written != size) {
-            ::CloseHandle(ov.hEvent);
             return false;
         }
 
-        ::CloseHandle(ov.hEvent);
         return true;
     }
 
@@ -134,33 +145,31 @@ namespace {
         if (!ov.hEvent)
             return false;
 
+        UniqueHandle ovHandle(ov.hEvent);
+
         BOOL ok = ::ReadFile(pipe, buffer, size, &bytesReadOut, &ov);
         if (!ok) {
             DWORD err = ::GetLastError();
             if (err != ERROR_IO_PENDING) {
-                ::CloseHandle(ov.hEvent);
                 return false;
             }
 
             DWORD waitRes = ::WaitForSingleObject(ov.hEvent, timeoutMs);
             if (waitRes != WAIT_OBJECT_0) {
                 ::CancelIo(pipe);
-                ::CloseHandle(ov.hEvent);
                 return false;
             }
 
             if (!::GetOverlappedResult(pipe, &ov, &bytesReadOut, FALSE)) {
-                ::CloseHandle(ov.hEvent);
                 return false;
             }
         }
 
-        ::CloseHandle(ov.hEvent);
         return true;
     }
 }
 
-bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::string& json, Exception exc) const {
+bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::string& json, Exception exc) {
     if (m_pipe == INVALID_HANDLE_VALUE) {
 		if (exc) exc("Pipe is not valid");
         return false;
@@ -169,6 +178,7 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
     DWORD bytesAvailable;
     if (!::PeekNamedPipe(m_pipe, NULL, 0, NULL, &bytesAvailable, NULL)) {
 		if (exc) exc("Lost connection to Discord");
+        disconnect();
         return false;
     }
 
@@ -192,6 +202,7 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
     if (!readWithTimeout(m_pipe, &responseHeader, sizeof(responseHeader), PIPE_READ_TIMEOUT_MS, bytesRead) ||
         bytesRead != sizeof(responseHeader)) {
         if (exc) exc("Failed to read response header from pipe");
+        disconnect();
         return false;
     }
     
@@ -256,9 +267,10 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
 }
 
 void DiscordRichPresence::Update(Exception exc) noexcept {
+    AutoUnlock lock(m_mutex);
     if (!m_connected || m_pipe == INVALID_HANDLE_VALUE)
         return;
-    
+
     m_pingCounter++;
     if (m_pingCounter >= PING_INTERVAL) {
         if (!sendDiscordMessageSync(1, R"({"cmd":"DISPATCH","evt":"READY"})", exc)) {
@@ -271,6 +283,7 @@ void DiscordRichPresence::Update(Exception exc) noexcept {
 
 bool DiscordRichPresence::Connect(__int64 clientId, Exception exc) noexcept
 {
+    AutoUnlock lock(m_mutex);
     if (!m_connected) {
         return m_connected = connectToDiscord(clientId, exc);
     }
@@ -278,6 +291,7 @@ bool DiscordRichPresence::Connect(__int64 clientId, Exception exc) noexcept
 }
 
 void DiscordRichPresence::Close(Exception exc) noexcept {
+    AutoUnlock lock(m_mutex);
     if (m_connected && m_pipe != INVALID_HANDLE_VALUE) {
         try {
             std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId()) + R"(,"activity":null},"nonce":")" + generateNonce() + R"("})";
@@ -288,6 +302,14 @@ void DiscordRichPresence::Close(Exception exc) noexcept {
 }
 
 bool DiscordRichPresence::SetPresence(const Presence& presence, Exception exc) noexcept {
+    AutoUnlock lock(m_mutex);
+
+	if (m_presence.compare(presence)) return true; // No changes, skip update
+	m_presence = presence;
+
+    m_lastUpdateTime.store(std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count());
+
     if (!m_connected || m_pipe == INVALID_HANDLE_VALUE) {
 		if (exc) exc("Not connected to Discord");
         return false;
@@ -370,7 +392,69 @@ bool DiscordRichPresence::SetPresence(const Presence& presence, Exception exc) n
     return sendDiscordMessageSync(1, activityJson, exc);
 }
 
-bool DiscordRichPresence::CheckConnection(Exception exc) const noexcept {
+bool DiscordRichPresence::SetIdleStatus(const Presence& presence, Exception exc) noexcept
+{
+    AutoUnlock lock(m_mutex);
+
+    if (!m_connected || m_pipe == INVALID_HANDLE_VALUE) {
+        if (exc) exc("Not connected to Discord");
+        return false;
+    }
+
+    DWORD bytesAvailable;
+    if (!::PeekNamedPipe(m_pipe, NULL, 0, NULL, &bytesAvailable, NULL)) {
+        m_connected = false;
+        if (exc) exc("Lost connection to Discord");
+        return false;
+    }
+
+    std::string idleJson;
+
+    idleJson = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId()) + R"(,"activity":{)";
+
+    bool needComma = false;
+
+    if (presence.details.size() >= MIN_STRING_LENGTH) {
+        if (needComma) 
+            idleJson += ",";
+        idleJson += R"("details":")" + escapeJsonString(presence.details) + R"(")";
+        needComma = true;
+    }
+
+    if (presence.startTime > 0) {
+        if (needComma) 
+            idleJson += ",";
+        idleJson += R"("timestamps":{"start":)" + std::to_string(presence.startTime);
+
+        if (presence.endTime > 0)
+            idleJson += R"(,"end":)" + std::to_string(presence.endTime);
+        idleJson += "}";
+        needComma = true;
+    }
+
+    if (needComma) idleJson += ",";
+    idleJson += R"("assets":{)";
+
+    bool hasAssets = false;
+    if (!presence.largeImage.empty()) {
+        idleJson += R"("large_image":")" + escapeJsonString(presence.largeImage) + R"(")";
+        hasAssets = true;
+    }
+
+    if (presence.largeText.size() >= MIN_STRING_LENGTH) {
+        if (hasAssets) 
+            idleJson += ",";
+        idleJson += R"("large_text":")" + escapeJsonString(presence.largeText) + R"(")";
+        hasAssets = true;
+    }
+
+    idleJson += R"(}}},"nonce":")" + generateNonce() + R"("})";
+
+    return sendDiscordMessageSync(1, idleJson, exc);
+}
+
+bool DiscordRichPresence::CheckConnection(Exception exc) noexcept {
+    AutoUnlock lock(m_mutex);
     if (m_pipe == INVALID_HANDLE_VALUE || !m_connected) {
 		if (exc) exc("Not connected to Discord");
         return false;

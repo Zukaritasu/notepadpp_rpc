@@ -17,5 +17,7 @@
 
 #include <windows.h>
 
+#define WM_NPP_SENDMESSAGE_SYNC (WM_USER + 1001)
+
 LPTSTR GetRCString(unsigned ids);
 HWND GetCurrentScintilla();

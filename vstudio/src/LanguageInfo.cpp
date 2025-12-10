@@ -15,6 +15,7 @@
 
 #include "LanguageInfo.h"
 #include "PluginInterface.h"
+#include "PluginUtil.h"
 
 
 extern NppData nppData;

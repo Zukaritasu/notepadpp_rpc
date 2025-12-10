@@ -16,9 +16,10 @@
 #pragma once
 
 #include <stdlib.h>
+#include <string>
+#include "PluginThread.h"
 
-#define MAX_FORMAT_BUF 128
-
+constexpr size_t MAX_FORMAT_BUF = 128;
 #define PLUGIN_CONFIG_FILENAME "DiscordRPC.yaml"
 
 struct PluginConfig
@@ -41,6 +42,18 @@ struct PluginConfig
 	PluginConfig& operator=(const PluginConfig& pg);
 };
 
-void LoadConfig(PluginConfig& config);
-void GetDefaultConfig(PluginConfig& config);
-void SaveConfig(const PluginConfig& config);
+class ConfigManager {
+private:
+	PluginConfig m_config;
+	BasicMutex m_mutex;
+
+	static void LoadDefaultConfig(PluginConfig& config);
+public:
+	PluginConfig GetConfig() noexcept;
+	bool SetConfig(const PluginConfig& newConfig, bool save = false) noexcept;
+	void LoadConfig();
+	bool SaveConfig();
+
+	static std::wstring GetConfigFilePath();
+	static PluginConfig GetDefaultConfig();
+};

@@ -17,9 +17,11 @@
 
 #include <windows.h>
 #include <string>
+#include <chrono>
 #include <cstdint>
 #include <string_view>
 #include <functional>
+#include "PluginThread.h"
 
 typedef std::function<void(const std::string&)> Exception;
 
@@ -36,6 +38,19 @@ struct Presence {
 	bool enableButtonRepository;
     
     Presence() : startTime(0), endTime(0), enableButtonRepository(false) {}
+
+    bool compare(const Presence& other) const {
+        return state == other.state &&
+               details == other.details &&
+               largeImage == other.largeImage &&
+               largeText == other.largeText &&
+               smallImage == other.smallImage &&
+               smallText == other.smallText &&
+               repositoryUrl == other.repositoryUrl &&
+               startTime == other.startTime &&
+               endTime == other.endTime &&
+               enableButtonRepository == other.enableButtonRepository;
+	}
 };
 
 struct DiscordIPCHeader {
@@ -50,11 +65,14 @@ private:
     static constexpr int PING_INTERVAL = 1800;
     static constexpr int MIN_STRING_LENGTH = 2;
     
+    BasicMutex m_mutex;
     HANDLE m_pipe;
     bool m_connected;
     int m_pingCounter;
+    std::atomic<__int64> m_lastUpdateTime;
+	struct Presence m_presence;
     
-    bool sendDiscordMessageSync(uint32_t opcode, const std::string& json, Exception exc) const;
+    bool sendDiscordMessageSync(uint32_t opcode, const std::string& json, Exception exc);
     bool connectToDiscord(__int64 clientId, Exception exc);
     void disconnect();
     std::string generateNonce() const;
@@ -107,17 +125,25 @@ public:
      * @return true if set successfully, false otherwise
      */
     bool SetPresence(const Presence& presence, Exception exc = nullptr) noexcept;
+
+    bool SetIdleStatus(const Presence& presence, Exception exc = nullptr) noexcept;
     
     /**
      * @brief Checks if connected to Discord
      * @return true if connected, false otherwise
      */
     bool IsConnected() const noexcept { return m_connected; }
+
+
+    bool LastUpdateTimeElapsed(int64_t elapsed) const noexcept {
+        return (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count() - m_lastUpdateTime.load()) >= elapsed;
+	}
     
     /**
      * @brief Verifies the connection status with Discord
      * @param exc Exception callback function (optional)
      * @return true if connection is active, false otherwise
      */
-    bool CheckConnection(Exception exc = nullptr) const noexcept;
+    bool CheckConnection(Exception exc = nullptr) noexcept;
 };

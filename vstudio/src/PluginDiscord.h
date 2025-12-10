@@ -21,7 +21,7 @@
 #include "PluginThread.h"
 #include "PluginConfig.h"
 #include "PluginUtil.h"
-#include "PresenceTextFormat.h"
+#include "TextEditorInfo.h"
 #include "DiscordRichPresence.hpp"
 
 class RichPresence
@@ -30,19 +30,43 @@ public:
 	RichPresence() {}
 	RichPresence(const RichPresence&) = delete;
 
-	void Init();
+	void InitializePresence();
 	void Update() noexcept;
 	void Close() noexcept;
 	
 private:
+	class PresenceTemp
+	{
+	public:
+		PresenceTemp() = default;
+		PresenceTemp(const PresenceTemp&) = delete;
+		PresenceTemp& operator=(const PresenceTemp&) = delete;
+
+		void operator=(const Presence& p)
+		{
+			AutoUnlock lock(mutex);
+			m_pTemp = p;
+		}
+		
+		operator Presence()
+		{
+			AutoUnlock lock(mutex);
+			return m_pTemp;
+		}
+	private:
+		Presence m_pTemp;
+		BasicMutex mutex;
+	};
+
+	
 	DiscordRichPresence _drp;
 	Presence            _p;
-	PresenceTextFormat  _format;
+	PresenceTemp        _pTemp;
+				
+	TextEditorInfo		_editorInfo;
 
 	// Thread that calls the Discord callbacks every few seconds
 	BasicThread*        _callbacks  = nullptr;
-	// Thread that updates the status every time there is a change
-	BasicThread*        _status     = nullptr;
 	// Thread that increments the idle time counter every second
 	BasicThread*        _idleTimer  = nullptr;
 
@@ -50,6 +74,5 @@ private:
 	void Connect(volatile bool* keepRunning = nullptr) noexcept;
 
 	static void CallBacks(void* data, volatile bool* keepRunning = nullptr) noexcept;
-	static void Status(void* data, volatile bool* keepRunning = nullptr) noexcept;
 	static void IdleTimer(void* data, volatile bool* keepRunning = nullptr) noexcept;
 };

@@ -30,16 +30,16 @@ const LPCSTR TOKENS[] =
 	"%(LANG)", "%(position)", "%(workspace)"
 };
 
-class PresenceTextFormat
+class TextEditorInfo
 {
 public:
 	struct FileInfo
 	{
-		char name[MAX_PATH];
-		char extension[MAX_PATH];
+		std::string name;
+		std::string extension;
 	};
 
-	PresenceTextFormat();
+	TextEditorInfo();
 
 	void LoadEditorStatus() noexcept;
 	void WriteFormat(std::string& buffer, const char* format) noexcept;
@@ -48,6 +48,8 @@ public:
 	const std::string& GetCurrentRepositoryUrl() const noexcept { return currentRepositoryUrl; }
 	bool IsCurrentFilePrivate() noexcept;
 	bool IsTextEditorIdle() const noexcept { return _textEditorIdle; }
+
+	static std::wstring GetEditorTextPropertyW(int prop);
 
 private:
 	struct Property
@@ -72,10 +74,13 @@ private:
 	bool _textEditorIdle = false;
 	__int64 _lastFileLength = 0;
 
-	void GetEditorProperty(char* buffer, int prop) noexcept;
 	bool ContainsTag(const char* format, const char* tag, size_t pos) noexcept;
 	bool SearchWorkspace(std::filesystem::path currentDir, std::string& workspace, std::string& absolutePathWorkspace, std::string& repoUrl) noexcept;
 	void GetRepositoryUrl(const std::string& fileConfig, std::string& url) noexcept;
 	// true = upper, false = lower
 	std::string& GetStringCase(std::string& s, bool case_) noexcept;
+
+
+	static std::string GetEditorTextProperty(int prop);
+	static std::string GetFormattedCurrentFileSize(HWND hWndScin, int64_t* fileSize = nullptr);
 };

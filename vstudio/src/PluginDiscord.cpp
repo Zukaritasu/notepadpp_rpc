@@ -34,27 +34,19 @@
 
 namespace
 {
-	const char* NPP_NAME = "Notepad++";
-
-	// Incremental counter of the time elapsed since the last idle in the code editor
-	std::atomic<int>  currentIdleTime = 0;
+	constexpr char* NPP_NAME = "Notepad++";
 }
 
-extern PluginConfig config;
+extern ConfigManager configManager;
 extern NppData nppData;
 
-// NOTE: called from the PluginDlgOption.cpp file
-BasicMutex mutex;
-
-
-void RichPresence::Init()
+void RichPresence::InitializePresence()
 {
-	if (_callbacks == nullptr && config._enable)
+	if (!_callbacks && configManager.GetConfig()._enable)
 	{
 		try
 		{
 			_callbacks = new BasicThread(RichPresence::CallBacks, this);
-			_status = new BasicThread(RichPresence::Status, this);
 			_idleTimer = new BasicThread(RichPresence::IdleTimer, this);
 		}
 		catch (const std::exception& exception)
@@ -68,68 +60,51 @@ void RichPresence::Init()
 
 void RichPresence::Update() noexcept
 {
-	if (!_drp.IsConnected())
-		return;
+	_editorInfo.LoadEditorStatus();
 
-	_format.LoadEditorStatus();
-	mutex.Lock();
+	const PluginConfig config = configManager.GetConfig();
 
 	_p.enableButtonRepository = config._button_repository;
 	_p.details = _p.state = _p.repositoryUrl =  "";
 
-	if (!_format.IsTextEditorIdle())
-		currentIdleTime.store(0);
-
-	if (currentIdleTime.load() >= config._idle_time)
-	{
-		if (config._hide_idle_status)
-			currentIdleTime.store(0);
-		else
-		{
-			_p.details = "Idle";
-			_p.smallText = _p.smallImage = "";
-			_p.largeText = NPP_NAME;
-			_p.largeImage = NPP_IDLEIMAGE;
-
-			_drp.SetPresence(_p);
-
-			mutex.Unlock();
-			return;
-		}
-	}
-
 	// If the current file is private and the option to hide the presence
 	// when it is private is enabled, the presence will be closed
-	if (config._hide_if_private && !_format.IsFileInfoEmpty() && _format.IsCurrentFilePrivate())
+	if (config._hide_if_private && !_editorInfo.IsFileInfoEmpty() && _editorInfo.IsCurrentFilePrivate())
 	{
 		_p.details = "Private File";
-		_p.smallText = _p.smallImage = "";
+		_p.smallText = "";
 		_p.largeText = NPP_NAME;
 		_p.largeImage = NPP_DEFAULTIMAGE;
-		_drp.SetPresence(_p);
-		
-		mutex.Unlock();
+
+		_pTemp = _p;
+		if (_drp.IsConnected())
+		{
+			_drp.SetPresence(_p);
+		}
 		return;
 	}
 
 	UpdateAssets();
 	if (config._button_repository)
-		_p.repositoryUrl = _format.GetCurrentRepositoryUrl();
-	if (!_format.IsFileInfoEmpty())
+		_p.repositoryUrl = _editorInfo.GetCurrentRepositoryUrl();
+	if (!_editorInfo.IsFileInfoEmpty())
 	{
 		if (!config._hide_details)
-			_format.WriteFormat(_p.details, config._details_format);
+			_editorInfo.WriteFormat(_p.details, config._details_format);
 		if (!config._hide_state)
-			_format.WriteFormat(_p.state, config._state_format);
+			_editorInfo.WriteFormat(_p.state, config._state_format);
 	}
 
-	_drp.SetPresence(_p);
-	mutex.Unlock();
+	_pTemp = _p;
+	if (_drp.IsConnected())
+	{
+		_drp.SetPresence(_p);
+	}
 }
 
 static void SafeStopAndDelete(BasicThread*& thread) noexcept
 {
-	if (thread != nullptr)
+	if (thread)
 	{
 		thread->Stop();
 		thread->Wait();
@@ -140,13 +115,10 @@ static void SafeStopAndDelete(BasicThread*& thread) noexcept
 
 void RichPresence::Close() noexcept
 {
-	mutex.Lock();
 	SafeStopAndDelete(_callbacks);
-	SafeStopAndDelete(_status);
 	SafeStopAndDelete(_idleTimer);
 
 	_drp.Close();
-	mutex.Unlock();
 }
 
 void RichPresence::UpdateAssets() noexcept
@@ -154,15 +126,15 @@ void RichPresence::UpdateAssets() noexcept
 	_p.smallText = _p.smallImage = 
 	_p.largeText = _p.largeImage = "";
 
-	if (!config._lang_image)
+	if (!configManager.GetConfig()._lang_image)
 	{
 		_p.largeImage = NPP_DEFAULTIMAGE;
 		_p.largeText = NPP_NAME;
 	}
-	else if (!_format.IsFileInfoEmpty())
+	else if (!_editorInfo.IsFileInfoEmpty())
 	{
-		_p.largeImage = _format.GetLanguageInfo()._large_image;
-		_format.WriteFormat(_p.largeText, config._large_text_format);
+		_p.largeImage = _editorInfo.GetLanguageInfo()._large_image;
+		_editorInfo.WriteFormat(_p.largeText, configManager.GetConfig()._large_text_format);
 		if (_p.largeImage != NPP_DEFAULTIMAGE)
 		{
 			_p.smallImage = NPP_DEFAULTIMAGE;
@@ -180,12 +152,11 @@ void RichPresence::Connect(volatile bool* keepRunning) noexcept
 {
 	while (keepRunning != nullptr && *keepRunning)
 	{
-		if (_drp.Connect(config._client_id))
+		if (_drp.Connect(configManager.GetConfig()._client_id))
 			break;
 		BasicThread::Sleep(keepRunning, RPC_TIME_RECONNECTION);
 	}
 }
-
 
 /////////
 // Threads --------------------------
@@ -202,46 +173,53 @@ void RichPresence::CallBacks(void* data, volatile bool* keepRunning) noexcept
 		if (!(*keepRunning))
 			return;
 
-		auto now = std::chrono::system_clock::now();
-		auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 		// Set the start time to the current time
-		rpc->_p.startTime = timestamp;
-		rpc->Update();
+		rpc->_p.startTime = std::chrono::duration_cast<std::chrono::seconds>(
+			std::chrono::system_clock::now().time_since_epoch()).count();
+		
+		Presence pTemp = rpc->_pTemp;
+		pTemp.startTime = rpc->_p.startTime;
 
+		drp.SetPresence(pTemp);
 		while (*keepRunning)
 		{
-			mutex.Lock();
-
 			drp.Update();
 			if (!*keepRunning || !drp.IsConnected())
-			{
-				mutex.Unlock();
 				break;
-			}
-			mutex.Unlock();
-			BasicThread::Sleep(keepRunning, RPC_UPDATE_TIME / 60);
+			BasicThread::Sleep(keepRunning, RPC_UPDATE_TIME);
 		}
 	}
 }
 
-void RichPresence::Status(void* data, volatile bool* keepRunning) noexcept
+void RichPresence::IdleTimer(void* data, volatile bool* keepRunning) noexcept
 {
-	const unsigned refreshTime = config._refreshTime;
-	while (*keepRunning)
-	{
-		BasicThread::Sleep(keepRunning, refreshTime);
-		if (!*keepRunning)
-			break;
-		reinterpret_cast<RichPresence*>(data)->Update();
-	}
-}
+	RichPresence* rpc = reinterpret_cast<RichPresence*>(data);
 
-void RichPresence::IdleTimer(void*, volatile bool* keepRunning) noexcept
-{
-	currentIdleTime.store(0);
+	bool isIdle = false;
+	
 	while (*keepRunning)
 	{
 		BasicThread::Sleep(keepRunning, 1000);
-		currentIdleTime.fetch_add(1);
+		if (configManager.GetConfig()._hide_idle_status)
+			continue;
+		
+		if (rpc->_drp.LastUpdateTimeElapsed(configManager.GetConfig()._idle_time))
+		{
+			if (isIdle) continue;
+			isIdle = true;
+
+			Presence p;
+
+			p.details = "Idle";
+			p.largeText = NPP_NAME;
+			p.largeImage = NPP_IDLEIMAGE;
+			p.startTime = rpc->_p.startTime;
+
+			rpc->_drp.SetIdleStatus(p);
+		}
+		else
+		{
+			isIdle = false;
+		}
 	}
 }
