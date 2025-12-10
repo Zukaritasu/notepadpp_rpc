@@ -70,7 +70,7 @@ void TextEditorInfo::LoadEditorStatus() noexcept
 			return static_cast<char>(std::tolower(c));
 		});
 	
-	_lang_info = ::GetLanguageInfo(lowerExtension.c_str());
+	_lang_info = LanguageInfo::GetLanguageInfo(lowerExtension);
 
 	// Save old values to check if something changed for idle detection
 	int oldCurrentLine    = props[2],

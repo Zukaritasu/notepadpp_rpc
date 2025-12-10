@@ -20,11 +20,11 @@
 
 extern NppData nppData;
 
-LanguageInfo GetLanguageInfo(const char* extension)
+LanguageInfo LanguageInfo::GetLanguageInfo(const std::string& extension)
 {
 	// returns the default information because the file does not have an
 	// extension that identifies it
-	if (extension == nullptr || extension[0] == '\0')
+	if (extension.empty())
 		return { "TEXT",  NPP_DEFAULTIMAGE };
 	
 	LangType current_lang = L_TEXT;
@@ -68,21 +68,14 @@ LanguageInfo GetLanguageInfo(const char* extension)
 	case L_MATLAB:        return { "MATLAB", "matlab" };
 	case L_PROPS:         return { "PROPERTIES", "properties" };
 	default:
-		if (strcmp(extension, ".gitignore") == 0)
+		if (extension == ".gitignore")
 			return               { "GIT", "git" };
 		// In dark mode it is L_USER but it is ignored 
-		if (strcmp(extension, ".md") == 0 || strcmp(extension, ".markdown") == 0)
+		if (extension == ".md" || extension == ".markdown")
 			return               { "MARKDOWN", "markdown" };
-		if (strcmp(extension, ".ts") == 0 || strcmp(extension, ".tsx") == 0)
+		if (extension == ".ts" || extension == ".tsx")
 			return               { "TYPESCRIPT", "typescript" };
 		break;
 	}
 	return { "TEXT", NPP_DEFAULTIMAGE };
-}
-
-LanguageInfo& LanguageInfo::operator=(const LanguageInfo& info)
-{
-	_name = info._name;
-	_large_image = info._large_image;
-	return *this;
 }

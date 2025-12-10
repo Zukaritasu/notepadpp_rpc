@@ -15,15 +15,16 @@
 
 #pragma once
 
-#define NPP_DEFAULTIMAGE  "favicon"
-#define NPP_IDLEIMAGE    "idle"
+#include <string>
 
-struct LanguageInfo
+constexpr auto NPP_DEFAULTIMAGE = "favicon";
+constexpr auto NPP_IDLEIMAGE = "idle";
+
+class LanguageInfo
 {
-	const char* _name;
-	const char* _large_image;
+public:
+	std::string _name;
+	std::string _large_image;
 
-	LanguageInfo& operator =(const LanguageInfo& info);
+	static LanguageInfo GetLanguageInfo(const std::string& extension);
 };
-
-LanguageInfo GetLanguageInfo(const char* extension);

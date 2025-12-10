@@ -69,7 +69,7 @@ private:
 
 	Property props[ARRAYSIZE(TOKENS)];
 	FileInfo _info{};
-	LanguageInfo _lang_info{};
+	LanguageInfo _lang_info;
 	FileFilter _fileFilter{};
 	bool _textEditorIdle = false;
 	__int64 _lastFileLength = 0;
