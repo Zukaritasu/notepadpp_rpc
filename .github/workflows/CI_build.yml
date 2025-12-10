@@ -12,8 +12,6 @@ jobs:
         build_configuration: [Release, Debug]
         build_platform: [x64, Win32]
 
-        vcpkgCommitId: '785d9d2011b0213d5267a42167d498c17b5e8c18'
-      
         vcpkg_triplet: [x64-windows, x86-windows]
         include:
           - build_platform: x64
@@ -25,22 +23,18 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v5
 
-    - name: Install vcpkg Dependencies
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
-        vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
-
     - name: Set VCPKG Environment Variable
       run: echo "VCPKG=${{ github.workspace }}\vcpkg-root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       shell: powershell
 
-    - name: Install yaml-cpp via vcpkg
+    - name: Install vcpkg Dependencies
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgArguments: "install yaml-cpp:${{ matrix.vcpkg_triplet }}"
+        vcpkgGitCommitId: '785d9d2011b0213d5267a42167d498c17b5e8c18' 
         vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
-  
+        runVcpkgInstall: true
+        vcpkgArguments: "install yaml-cpp:${{ matrix.vcpkg_triplet }}
+
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v2
 
