@@ -39,7 +39,7 @@ jobs:
 
     - name: MSBuild of plugin dll
       working-directory: vstudio\vs.proj\
-      run: msbuild DiscordRPC.vcxproj /m /p:Configuration="${{ matrix.build_configuration }}" /p:Platform="${{ matrix.build_platform }}" /p:PlatformToolset="v143" /p:VCPKG="${{ github.workspace }}\vcpkg-root
+      run: msbuild DiscordRPC.vcxproj /m /p:Configuration="${{ matrix.build_configuration }}" /p:Platform="${{ matrix.build_platform }}" /p:PlatformToolset="v143" /p:VCPKG="${{ github.workspace }}\vcpkg-root"
 
     #
     - name: Archive artifacts for x64
