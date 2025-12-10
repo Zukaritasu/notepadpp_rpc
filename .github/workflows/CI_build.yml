@@ -35,8 +35,8 @@ jobs:
 
     - name: Install yaml-cpp Package
       run: |
-        $VCPKG_ROOT = "${{ github.workspace }}\vcpkg-root"
-        & "$VCPKG_ROOT\vcpkg.exe" install "yaml-cpp:${{ matrix.vcpkg_triplet }}"
+        $VCPKG = "${{ github.workspace }}\vcpkg-root"
+        & "$VCPKG\vcpkg.exe" install "yaml-cpp:${{ matrix.vcpkg_triplet }}"
       shell: powershell
 
     - name: Add msbuild to PATH
