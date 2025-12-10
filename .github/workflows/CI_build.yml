@@ -11,28 +11,67 @@ jobs:
       matrix:
         build_configuration: [Release, Debug]
         build_platform: [x64, Win32]
-        
+      
+        vcpkg_triplet: [x64-windows, x86-windows]
+        include:
+          - build_platform: x64
+            vcpkg_triplet: x64-windows
+          - build_platform: Win32
+            vcpkg_triplet: x86-windows
+
     steps:
     - name: Checkout repo
       uses: actions/checkout@v5
 
+    - name: Install vcpkg Dependencies
+      uses: lukka/run-vcpkg@v11
+      with:
+        setupOnly: true
+        vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
+
+    - name: Set VCPKG Environment Variable
+      run: echo "VCPKG=${{ github.workspace }}\vcpkg-root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: powershell
+
+    - name: Install yaml-cpp via vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgArguments: "install yaml-cpp:${{ matrix.vcpkg_triplet }}"
+        vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
+  
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v2
 
     - name: MSBuild of plugin dll
       working-directory: vstudio\vs.proj\
-      run: msbuild NppPluginTemplate.vcxproj /m /p:configuration="${{ matrix.build_configuration }}" /p:platform="${{ matrix.build_platform }}" /p:PlatformToolset="v143"
+      run: msbuild DiscordRPC.vcxproj /m /p:Configuration="${{ matrix.build_configuration }}" /p:Platform="${{ matrix.build_platform }}" /p:PlatformToolset="v143"
 
+    #
     - name: Archive artifacts for x64
       if: matrix.build_platform == 'x64' && matrix.build_configuration == 'Release'
       uses: actions/upload-artifact@v5
       with:
-          name: plugin_dll_x64
+          name: DiscordRPC_x64
           path: vstudio\bin64\DiscordRPC.dll
 
+    - name: Archive artifacts for Debug x64
+      if: matrix.build_platform == 'x64' && matrix.build_configuration == 'Debug'
+      uses: actions/upload-artifact@v5
+      with:
+          name: DiscordRPC_Debug_x64
+          path: vstudio\bin64\debug\DiscordRPC.dll
+
+    #
     - name: Archive artifacts for Win32
       if: matrix.build_platform == 'Win32' && matrix.build_configuration == 'Release'
       uses: actions/upload-artifact@v5
       with:
-          name: plugin_dll_x86
+          name: DiscordRPC_x86
           path: vstudio\bin\DiscordRPC.dll
+
+    - name: Archive artifacts for Debug Win32
+      if: matrix.build_platform == 'Win32' && matrix.build_configuration == 'Debug'
+      uses: actions/upload-artifact@v5
+      with:
+          name: DiscordRPC_Debug_x86
+          path: vstudio\bin\debug\DiscordRPC.dll
