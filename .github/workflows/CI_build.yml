@@ -33,7 +33,7 @@ jobs:
         vcpkgGitCommitId: '785d9d2011b0213d5267a42167d498c17b5e8c18' 
         vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
         runVcpkgInstall: true
-        vcpkgArguments: "install yaml-cpp:${{ matrix.vcpkg_triplet }}
+        vcpkgArguments: "install yaml-cpp:${{ matrix.vcpkg_triplet }}"
 
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v2
