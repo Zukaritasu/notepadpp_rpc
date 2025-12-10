@@ -30,7 +30,7 @@ jobs:
 
     - name: Install yaml-cpp Package
       run: |
-        $VCPKG = "${{ github.workspace }}\vcpkg-root"\
+        $VCPKG = "${{ github.workspace }}\vcpkg-root"
         & "$VCPKG\vcpkg.exe" install "yaml-cpp:${{ matrix.vcpkg_triplet }}"
       shell: powershell
 
