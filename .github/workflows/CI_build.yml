@@ -10,9 +10,7 @@ jobs:
       max-parallel: 6
       matrix:
         build_configuration: [Release, Debug]
-        build_platform: [x64, Win32]
-
-        vcpkg_triplet: [x64-windows, x86-windows]
+        
         include:
           - build_platform: x64
             vcpkg_triplet: x64-windows
@@ -23,19 +21,16 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v5
 
-    - name: Set VCPKG Environment Variable
-      run: echo "VCPKG=${{ github.workspace }}\vcpkg-root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      shell: powershell
-
-    - name: Install vcpkg Dependencies
+    - name: Setup vcpkg Tool
       uses: lukka/run-vcpkg@v11.5
       with:
         vcpkgGitCommitId: 'f5cbc726b123896eef77f5acc1b9047a28a0731e' 
         vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
+        runVcpkgInstall: false 
 
     - name: Install yaml-cpp Package
       run: |
-        $VCPKG = "${{ github.workspace }}\vcpkg-root"
+        $VCPKG = "${{ github.workspace }}\vcpkg-root"\
         & "$VCPKG\vcpkg.exe" install "yaml-cpp:${{ matrix.vcpkg_triplet }}"
       shell: powershell
 
@@ -44,7 +39,7 @@ jobs:
 
     - name: MSBuild of plugin dll
       working-directory: vstudio\vs.proj\
-      run: msbuild DiscordRPC.vcxproj /m /p:Configuration="${{ matrix.build_configuration }}" /p:Platform="${{ matrix.build_platform }}" /p:PlatformToolset="v143"
+      run: msbuild DiscordRPC.vcxproj /m /p:Configuration="${{ matrix.build_configuration }}" /p:Platform="${{ matrix.build_platform }}" /p:PlatformToolset="v143" /p:VCPKG="${{ github.workspace }}\vcpkg-root
 
     #
     - name: Archive artifacts for x64
