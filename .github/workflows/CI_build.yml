@@ -30,7 +30,7 @@ jobs:
     - name: Install vcpkg Dependencies
       uses: lukka/run-vcpkg@v11.5
       with:
-        vcpkgGitCommitId: '6060300f18978a719d8a5cdb13d3f1e06ab9fb47' 
+        vcpkgGitCommitId: 'f5cbc726b123896eef77f5acc1b9047a28a0731e' 
         vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
 
     - name: Install yaml-cpp Package
