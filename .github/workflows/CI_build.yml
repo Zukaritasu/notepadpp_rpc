@@ -28,9 +28,9 @@ jobs:
       shell: powershell
 
     - name: Install vcpkg Dependencies
-      uses: lukka/run-vcpkg@v11
+      uses: lukka/run-vcpkg@v11.5
       with:
-        vcpkgGitCommitId: '785d9d2011b0213d5267a42167d498c17b5e8c18' 
+        vcpkgGitCommitId: '6060300f18978a719d8a5cdb13d3f1e06ab9fb47' 
         vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
 
     - name: Install yaml-cpp Package
