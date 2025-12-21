@@ -150,7 +150,7 @@ void RichPresence::UpdateAssets() noexcept
 
 void RichPresence::Connect(volatile bool* keepRunning) noexcept
 {
-	while (keepRunning != nullptr && *keepRunning)
+	while (keepRunning && *keepRunning)
 	{
 		if (_drp.Connect(configManager.GetConfig()._client_id))
 			break;
