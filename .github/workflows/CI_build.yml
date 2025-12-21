@@ -44,14 +44,14 @@ jobs:
     #
     - name: Archive artifacts for x64
       if: matrix.build_platform == 'x64' && matrix.build_configuration == 'Release'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
           name: DiscordRPC_x64
           path: vstudio\bin64\DiscordRPC.dll
 
     - name: Archive artifacts for Debug x64
       if: matrix.build_platform == 'x64' && matrix.build_configuration == 'Debug'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
           name: DiscordRPC_Debug_x64
           path: vstudio\bin64\debug\DiscordRPC.dll
@@ -59,14 +59,14 @@ jobs:
     #
     - name: Archive artifacts for Win32
       if: matrix.build_platform == 'Win32' && matrix.build_configuration == 'Release'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
           name: DiscordRPC_x86
           path: vstudio\bin\DiscordRPC.dll
 
     - name: Archive artifacts for Debug Win32
       if: matrix.build_platform == 'Win32' && matrix.build_configuration == 'Debug'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
           name: DiscordRPC_Debug_x86
           path: vstudio\bin\debug\DiscordRPC.dll
