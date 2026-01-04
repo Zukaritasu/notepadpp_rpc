@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Zukaritasu
+// Copyright (C) 2025 - 2026 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ std::string DiscordRichPresence::escapeJsonString(const std::string& str) const 
     std::string escaped;
     escaped.reserve(str.size() + 10); // Reserve extra space for escape characters
     
-    for (char c : str) {
+    for (unsigned char c : str) {
         switch (c) {
             case '"':  escaped += "\\\""; break;
             case '\\': escaped += "\\\\"; break;
@@ -52,16 +52,12 @@ std::string DiscordRichPresence::escapeJsonString(const std::string& str) const 
             case '\r': escaped += "\\r"; break;
             case '\t': escaped += "\\t"; break;
             default:
-                if (c >= 0 && c < 32) {
-                    // Control characters
-                    escaped += "\\u";
-                    escaped += "0000";
-                    escaped[escaped.size() - 4] = '0' + ((c >> 12) & 15);
-                    escaped[escaped.size() - 3] = '0' + ((c >> 8) & 15);
-                    escaped[escaped.size() - 2] = '0' + ((c >> 4) & 15);
-                    escaped[escaped.size() - 1] = '0' + (c & 15);
+                if (c < 32) {
+                    char buf[7];
+                    snprintf(buf, sizeof(buf), "\\u%04x", c);
+                    escaped += buf;
                 } else {
-                    escaped += c;
+                    escaped += (char)c;
                 }
                 break;
         }
@@ -71,17 +67,18 @@ std::string DiscordRichPresence::escapeJsonString(const std::string& str) const 
 
 bool DiscordRichPresence::connectToDiscord(__int64 clientId, Exception exc) {
     for (int i = 0; i < MAX_PIPE_ATTEMPTS; i++) {
-        std::string pipeName = R"(\\?\pipe\discord-ipc-)" + std::to_string(i);
-        m_pipe = ::CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
-        if (m_pipe != INVALID_HANDLE_VALUE) {
-            std::string handshake = R"({"v":1,"client_id":")" + std::to_string(clientId) + R"("})";
-            if (sendDiscordMessageSync(0, handshake, exc)) {
-                return true;
+        std::string pipeName = R"(\\.\pipe\discord-ipc-)" + std::to_string(i);
+        if (WaitNamedPipeA(pipeName.c_str(), 100)) {
+            m_pipe = ::CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                FILE_FLAG_OVERLAPPED | SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION, NULL);
+            if (m_pipe != INVALID_HANDLE_VALUE) {
+                std::string handshake = R"({"v":1,"client_id":")" + std::to_string(clientId) + R"("})";
+                if (sendDiscordMessageSync(0, handshake, exc))
+                    return true;
+                ::CloseHandle(m_pipe);
+                m_pipe = INVALID_HANDLE_VALUE;
             }
-
-            ::CloseHandle(m_pipe);
-            m_pipe = INVALID_HANDLE_VALUE;
-        }
+		}
     }
     if (exc) exc("Could not connect to Discord. Is Discord running?");
     return false;
