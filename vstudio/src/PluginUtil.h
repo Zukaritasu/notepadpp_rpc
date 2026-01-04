@@ -21,3 +21,4 @@
 
 LPTSTR GetRCString(unsigned ids);
 HWND GetCurrentScintilla();
+LRESULT NppSendMessage(HWND hWnd, UINT Msg, WPARAM wParam = 0, LPARAM lParam = 0);

@@ -80,11 +80,11 @@ void TextEditorInfo::LoadEditorStatus() noexcept
 	props[0] = _info.name;
 	props[1] = _info.extension;
 
-	props[2] = static_cast<int>(SendMessage(nppData._nppHandle, NPPM_GETCURRENTLINE, 0, 0)) + 1;
-	props[3] = static_cast<int>(SendMessage(nppData._nppHandle, NPPM_GETCURRENTCOLUMN, 0, 0)) + 1;
+	props[2] = static_cast<int>(NppSendMessage(nppData._nppHandle, NPPM_GETCURRENTLINE, 0, 0)) + 1;
+	props[3] = static_cast<int>(NppSendMessage(nppData._nppHandle, NPPM_GETCURRENTCOLUMN, 0, 0)) + 1;
 
 	props[4] = GetFormattedCurrentFileSize(hWndScin, &_lastFileLength);
-	props[5] = static_cast<int>(SendMessage(hWndScin, SCI_GETLINECOUNT, 0, 0));
+	props[5] = static_cast<int>(NppSendMessage(hWndScin, SCI_GETLINECOUNT, 0, 0));
 
 	std::string langName = _lang_info._name;
 
@@ -94,7 +94,7 @@ void TextEditorInfo::LoadEditorStatus() noexcept
 	props[7] = langName; // first letter in upper case
 	props[8] = GetStringCase(langName, true); // upper case
 
-	props[9] = static_cast<int>(::SendMessage(hWndScin, SCI_GETCURRENTPOS, 0, 0) + 1L);
+	props[9] = static_cast<int>(::NppSendMessage(hWndScin, SCI_GETCURRENTPOS, 0, 0) + 1L);
 	
 	// Determine workspace
 	std::string currentDir = GetEditorTextProperty(NPPM_GETCURRENTDIRECTORY);
@@ -260,9 +260,9 @@ std::wstring TextEditorInfo::GetEditorTextPropertyW(int prop)
 
 	while (true)
 	{
-		// The SendMessage function with text messages returns FALSE if the buffer
+		// The NppSendMessage function with text messages returns FALSE if the buffer
 		// size is too small or TRUE if the task was performed correctly.
-		if (SendMessage(nppData._nppHandle, prop, static_cast<WPARAM>(bufferSize), reinterpret_cast<LPARAM>(buffer.data())))
+		if (NppSendMessage(nppData._nppHandle, prop, static_cast<WPARAM>(bufferSize), reinterpret_cast<LPARAM>(buffer.data())))
 		{
 			const size_t length = buffer.find(L'\0');
 
@@ -290,9 +290,9 @@ std::string TextEditorInfo::GetEditorTextProperty(int prop)
 
 	while (true)
 	{
-		// The SendMessage function with text messages returns FALSE if the buffer
+		// The NppSendMessage function with text messages returns FALSE if the buffer
 		// size is too small or TRUE if the task was performed correctly.
-		if (SendMessage(nppData._nppHandle, prop, static_cast<WPARAM>(bufferSize), reinterpret_cast<LPARAM>(wbuffer.data())))
+		if (NppSendMessage(nppData._nppHandle, prop, static_cast<WPARAM>(bufferSize), reinterpret_cast<LPARAM>(wbuffer.data())))
 		{
 			int cbRequired = WideCharToMultiByte(CP_UTF8, 0, wbuffer.data(), -1,
 				NULL, 0, NULL, FALSE);
@@ -322,7 +322,7 @@ std::string TextEditorInfo::GetFormattedCurrentFileSize(HWND hWndScin, int64_t* 
 	char sizeFormattedBuf[48] = { '\0' };
 	int64_t fileSizeLocal = 0;
 
-	StrFormatByteSize64A(fileSizeLocal = ::SendMessage(hWndScin, SCI_GETLENGTH, 0, 0),
+	StrFormatByteSize64A(fileSizeLocal = ::NppSendMessage(hWndScin, SCI_GETLENGTH, 0, 0),
 		sizeFormattedBuf, 48);
 
 	if (fileSize)

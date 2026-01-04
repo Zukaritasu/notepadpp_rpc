@@ -173,14 +173,14 @@ bool ConfigManager::SaveConfig()
 
 std::wstring ConfigManager::GetConfigFilePath()
 {
-	const size_t requiredLength = SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, 0, NULL);
+	const size_t requiredLength = NppSendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, 0, NULL);
 	if (requiredLength == 0)
 		throw std::runtime_error("Failed to get plugin config directory.");
 
 	std::wstring configDir;
 	configDir.resize(requiredLength);
 
-	SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, requiredLength + 1, (LPARAM)configDir.data());
+	NppSendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, requiredLength + 1, (LPARAM)configDir.data());
 	configDir.append(L"\\").append(_T(PLUGIN_CONFIG_FILENAME));
 	return configDir;
 }

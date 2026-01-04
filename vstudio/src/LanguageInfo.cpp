@@ -28,7 +28,7 @@ LanguageInfo LanguageInfo::GetLanguageInfo(const std::string& extension)
 		return { "TEXT",  NPP_DEFAULTIMAGE };
 	
 	LangType current_lang = L_TEXT;
-	SendMessage(nppData._nppHandle, NPPM_GETCURRENTLANGTYPE, 0, (LPARAM)&current_lang);
+	NppSendMessage(nppData._nppHandle, NPPM_GETCURRENTLANGTYPE, 0, (LPARAM)&current_lang);
 
 	switch (current_lang)
 	{

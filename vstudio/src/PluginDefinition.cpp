@@ -141,7 +141,7 @@ void OpenConfigurationFile()
 
 	if (!PathFileExists(configDir.c_str()))
 		if (!configManager.SaveConfig()) return;
-	SendMessage(nppData._nppHandle, NPPM_DOOPEN, 0, (LPARAM)configDir.c_str());
+	NppSendMessage(nppData._nppHandle, NPPM_DOOPEN, 0, (LPARAM)configDir.c_str());
 }
 
 ////////////////////////////////////////////

@@ -63,14 +63,14 @@ static bool CreateTooltipInfo(HWND hWnd)
 	toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
 	toolInfo.hwnd   = hWnd;
 	
-	SendMessage(toolTip, TTM_SETMAXTIPWIDTH, 0, 340);
+	NppSendMessage(toolTip, TTM_SETMAXTIPWIDTH, 0, 340);
 
 	auto SetToolTip = [&](unsigned idc, unsigned id_tip)
 	{
 		toolInfo.lpszText = GetRCString(id_tip);
 		toolInfo.uId      = reinterpret_cast<UINT_PTR>(GetDlgItem(hWnd, idc));
 
-		SendMessage(toolTip, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(&toolInfo));
+		NppSendMessage(toolTip, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(&toolInfo));
 	};
 
 	// Its respective tool tip is established in each control of the options window.

@@ -21,6 +21,7 @@
 #endif // _DEBUG
 
 #include <assert.h>
+#include <stdexcept>
 
 extern HINSTANCE hPlugin;
 extern NppData   nppData;
@@ -38,12 +39,16 @@ LPTSTR GetRCString(unsigned ids)
 
 HWND GetCurrentScintilla()
 {
-	assert(nppData._nppHandle != nullptr);
-	assert(GetWindowThreadProcessId(nppData._nppHandle, nullptr) == GetCurrentThreadId());
-
 	int which = -1;
-	SendMessage(nppData._nppHandle, NPPM_GETCURRENTSCINTILLA, 0, (LPARAM)&which);
+	NppSendMessage(nppData._nppHandle, NPPM_GETCURRENTSCINTILLA, 0, (LPARAM)&which);
 	if (which == -1)
 		return nullptr;
 	return (which == 0) ? nppData._scintillaMainHandle : nppData._scintillaSecondHandle;
+}
+
+LRESULT NppSendMessage(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+{
+	if (GetWindowThreadProcessId(hWnd, nullptr) != GetCurrentThreadId())
+		throw std::runtime_error("NppSendMessage cannot be called from a background thread.");
+	return ::SendMessage(hWnd, Msg, wParam, lParam);
 }
