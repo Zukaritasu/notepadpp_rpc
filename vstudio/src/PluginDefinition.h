@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Zukaritasu
+// Copyright (C) 2022 - 2026 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,12 @@
 #include "PluginInterface.h"
 
 #include <windows.h>
+#include <string>
+
+// Error queue helpers (thread-safe): worker threads enqueue errors,
+// main thread consumes and shows them.
+void QueueErrorMessage(const std::string &msg) noexcept;
+void ShowQueuedErrorIfAny() noexcept;
 
 const TCHAR NPP_PLUGIN_NAME[] = TEXT("Discord Rich Presence");
 const int nbFunc = 4;

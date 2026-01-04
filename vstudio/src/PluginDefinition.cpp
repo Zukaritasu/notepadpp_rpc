@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2025 Zukaritasu
+// Copyright (C) 2022-2026 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 #include "PluginUtil.h"
 #include "TextEditorInfo.h"
 #include <vector>
+#include <mutex>
+#include <string>
+#include <atomic>
 
 #ifdef _DEBUG
 #include <cstdio>
@@ -42,6 +45,40 @@ NppData nppData;
 RichPresence rpc;
 ConfigManager configManager;
 HINSTANCE hPlugin = nullptr;
+
+static std::mutex g_errorMutex;
+static std::string g_errorMessage;
+static std::atomic<bool> g_hasError{false};
+
+void QueueErrorMessage(const std::string &msg) noexcept
+{
+	try
+	{
+		std::lock_guard<std::mutex> lock(g_errorMutex);
+		g_errorMessage = msg;
+		g_hasError.store(true, std::memory_order_release);
+	}
+	catch (...) { /* swallow - best effort */ }
+}
+
+void ShowQueuedErrorIfAny() noexcept
+{
+	if (!g_hasError.load(std::memory_order_acquire))
+		return;
+
+	std::string msg;
+	{
+		std::lock_guard<std::mutex> lock(g_errorMutex);
+		msg.swap(g_errorMessage);
+		g_hasError.store(false, std::memory_order_release);
+	}
+
+	if (!msg.empty())
+	{
+		::MessageBoxA(nppData._nppHandle, msg.c_str(), "Discord Rich Presence Error",
+					  MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
+	}
+}
 
 ///////////////////////////////////////////
 
@@ -95,6 +132,8 @@ void About()
 
 extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 {
+	ShowQueuedErrorIfAny();
+
 	switch (notifyCode->nmhdr.code)
 	{
 	case NPPN_BUFFERACTIVATED:

@@ -1,4 +1,4 @@
-// Copyright (C) 2022 - 2025 Zukaritasu
+// Copyright (C) 2022 - 2026 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 #include "PluginDiscord.h"
 #include "PluginInterface.h"
 #include "PluginResources.h"
+#include "PluginDefinition.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -30,11 +31,11 @@
 
 #include "PluginError.h"
 
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
 
 namespace
 {
-	constexpr char* NPP_NAME = "Notepad++";
+	constexpr char *NPP_NAME = "Notepad++";
 }
 
 extern ConfigManager configManager;
@@ -49,7 +50,7 @@ void RichPresence::InitializePresence()
 			_callbacks = new BasicThread(RichPresence::CallBacks, this);
 			_idleTimer = new BasicThread(RichPresence::IdleTimer, this);
 		}
-		catch (const std::exception& exception)
+		catch (const std::exception &exception)
 		{
 			if (_callbacks != nullptr)
 				Close();
@@ -65,7 +66,7 @@ void RichPresence::Update() noexcept
 	const PluginConfig config = configManager.GetConfig();
 
 	_p.enableButtonRepository = config._button_repository;
-	_p.details = _p.state = _p.repositoryUrl =  "";
+	_p.details = _p.state = _p.repositoryUrl = "";
 
 	// If the current file is private and the option to hide the presence
 	// when it is private is enabled, the presence will be closed
@@ -102,7 +103,7 @@ void RichPresence::Update() noexcept
 	}
 }
 
-static void SafeStopAndDelete(BasicThread*& thread) noexcept
+static void SafeStopAndDelete(BasicThread *&thread) noexcept
 {
 	if (thread)
 	{
@@ -123,8 +124,8 @@ void RichPresence::Close() noexcept
 
 void RichPresence::UpdateAssets() noexcept
 {
-	_p.smallText = _p.smallImage = 
-	_p.largeText = _p.largeImage = "";
+	_p.smallText = _p.smallImage =
+		_p.largeText = _p.largeImage = "";
 
 	if (!configManager.GetConfig()._lang_image)
 	{
@@ -148,7 +149,7 @@ void RichPresence::UpdateAssets() noexcept
 	}
 }
 
-void RichPresence::Connect(volatile bool* keepRunning) noexcept
+void RichPresence::Connect(volatile bool *keepRunning) noexcept
 {
 	while (keepRunning && *keepRunning)
 	{
@@ -158,68 +159,84 @@ void RichPresence::Connect(volatile bool* keepRunning) noexcept
 	}
 }
 
-/////////
-// Threads --------------------------
-////////
+// Static thread callback
 
-void RichPresence::CallBacks(void* data, volatile bool* keepRunning) noexcept
+void RichPresence::CallBacks(void *data, volatile bool *keepRunning) noexcept
 {
-	RichPresence* rpc = reinterpret_cast<RichPresence*>(data);
-	DiscordRichPresence& drp = rpc->_drp;
-	
-	while (*keepRunning)
+	try
 	{
-		rpc->Connect(keepRunning);
-		if (!(*keepRunning))
-			return;
+		RichPresence *rpc = reinterpret_cast<RichPresence *>(data);
+		DiscordRichPresence &drp = rpc->_drp;
 
-		// Set the start time to the current time
-		rpc->_p.startTime = std::chrono::duration_cast<std::chrono::seconds>(
-			std::chrono::system_clock::now().time_since_epoch()).count();
-		
-		Presence pTemp = rpc->_pTemp;
-		pTemp.startTime = rpc->_p.startTime;
-
-		drp.SetPresence(pTemp);
 		while (*keepRunning)
 		{
-			drp.Update();
-			if (!*keepRunning || !drp.IsConnected())
-				break;
-			BasicThread::Sleep(keepRunning, RPC_UPDATE_TIME);
+			rpc->Connect(keepRunning);
+			if (!(*keepRunning))
+				return;
+
+			// Set the start time to the current time
+			rpc->_p.startTime = std::chrono::duration_cast<std::chrono::seconds>(
+									std::chrono::system_clock::now().time_since_epoch())
+									.count();
+
+			Presence pTemp = rpc->_pTemp;
+			pTemp.startTime = rpc->_p.startTime;
+
+			drp.SetPresence(pTemp);
+			while (*keepRunning)
+			{
+				drp.Update();
+				if (!*keepRunning || !drp.IsConnected())
+					break;
+				BasicThread::Sleep(keepRunning, RPC_UPDATE_TIME);
+			}
 		}
+	}
+	catch (const std::exception &e)
+	{
+		QueueErrorMessage(e.what());
+		return;
 	}
 }
 
-void RichPresence::IdleTimer(void* data, volatile bool* keepRunning) noexcept
+void RichPresence::IdleTimer(void *data, volatile bool *keepRunning) noexcept
 {
-	RichPresence* rpc = reinterpret_cast<RichPresence*>(data);
-
-	bool isIdle = false;
-	
-	while (*keepRunning)
+	try
 	{
-		BasicThread::Sleep(keepRunning, 1000);
-		if (configManager.GetConfig()._hide_idle_status)
-			continue;
-		
-		if (rpc->_drp.LastUpdateTimeElapsed(configManager.GetConfig()._idle_time))
+		RichPresence *rpc = reinterpret_cast<RichPresence *>(data);
+
+		bool isIdle = false;
+
+		while (*keepRunning)
 		{
-			if (isIdle) continue;
-			isIdle = true;
+			BasicThread::Sleep(keepRunning, 1000);
+			if (configManager.GetConfig()._hide_idle_status)
+				continue;
 
-			Presence p;
+			if (rpc->_drp.LastUpdateTimeElapsed(configManager.GetConfig()._idle_time))
+			{
+				if (isIdle)
+					continue;
+				isIdle = true;
 
-			p.details = "Idle";
-			p.largeText = NPP_NAME;
-			p.largeImage = NPP_IDLEIMAGE;
-			p.startTime = rpc->_p.startTime;
+				Presence p;
 
-			rpc->_drp.SetIdleStatus(p);
+				p.details = "Idle";
+				p.largeText = NPP_NAME;
+				p.largeImage = NPP_IDLEIMAGE;
+				p.startTime = rpc->_p.startTime;
+
+				rpc->_drp.SetIdleStatus(p);
+			}
+			else
+			{
+				isIdle = false;
+			}
 		}
-		else
-		{
-			isIdle = false;
-		}
+	}
+	catch (const std::exception &e)
+	{
+		QueueErrorMessage(e.what());
+		return;
 	}
 }
