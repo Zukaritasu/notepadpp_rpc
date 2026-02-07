@@ -1,4 +1,4 @@
-// Copyright (C) 2022 - 2025 Zukaritasu
+// Copyright (C) 2022 - 2026 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -35,6 +35,15 @@ public:
 
 inline StringBuilder::StringBuilder(char* buf, size_t length)
 {
+	if (buf == nullptr)
+	{
+		throw std::invalid_argument("buf is nullptr");
+	}
+	if (length == 0)
+	{
+		throw std::invalid_argument("length is 0");
+	}
+	
 	_buf = buf;
 	_length = length;
 	_count = 0;
