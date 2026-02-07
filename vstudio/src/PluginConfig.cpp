@@ -24,6 +24,7 @@
 #include <tchar.h>
 #include <fstream>
 #include <cstring>
+#include <filesystem>
 #include <yaml-cpp\yaml.h>
 
 #pragma warning(disable: 4996)
@@ -55,7 +56,7 @@ void ConfigManager::LoadDefaultConfig(PluginConfig& config)
 	strncpy(config._large_text_format, DEF_LARGE_TEXT_FORMAT, MAX_FORMAT_BUF - 1);
 }
 
-PluginConfig ConfigManager::GetConfig() noexcept
+const PluginConfig& ConfigManager::GetConfig() noexcept
 {
 	AutoUnlock lock(m_mutex);
 	return m_config;
@@ -82,7 +83,7 @@ void ConfigManager::LoadConfig()
 		return;
 	}
 
-	std::ifstream stream(configPath);
+	std::ifstream stream{ std::filesystem::path(configPath) };
 	if (!stream.is_open())
 		throw std::runtime_error("The file does not exist or could not be opened: " PLUGIN_CONFIG_FILENAME);
 
@@ -157,7 +158,7 @@ bool ConfigManager::SaveConfig()
 		node["hideIdleStatus"]   = m_config._hide_idle_status;
 		node["idleTime"]         = m_config._idle_time;
 
-		std::ofstream out(configPath);
+		std::ofstream out{ std::filesystem::path(configPath) };
 		out << node;
 		out.close();
 
@@ -173,7 +174,7 @@ bool ConfigManager::SaveConfig()
 
 std::wstring ConfigManager::GetConfigFilePath()
 {
-	const size_t requiredLength = NppSendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, 0, NULL);
+	const size_t requiredLength = NppSendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, 0);
 	if (requiredLength == 0)
 		throw std::runtime_error("Failed to get plugin config directory.");
 

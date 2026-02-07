@@ -21,6 +21,9 @@
 #include <cstdint>
 #include <string_view>
 #include <functional>
+#include <atomic>
+#include <cstdint>
+#include <memory>
 #include "PluginThread.h"
 
 typedef std::function<void(const std::string&)> Exception;

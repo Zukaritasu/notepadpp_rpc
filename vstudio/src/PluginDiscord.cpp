@@ -35,7 +35,7 @@
 
 namespace
 {
-	constexpr char *NPP_NAME = "Notepad++";
+	constexpr const char *NPP_NAME = "Notepad++";
 }
 
 extern ConfigManager configManager;

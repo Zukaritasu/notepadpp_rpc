@@ -16,8 +16,8 @@
 #pragma once
 
 #include <Windows.h>
-#include <exception>
 #include <stdio.h>
+#include <stdexcept>
 
 ////////////////////////////////////////////////////////////////////
 
@@ -30,7 +30,7 @@ public:
 	{
 		handle = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)Run, this, 0, nullptr);
 		if (!handle) {
-			throw std::exception("CreateThread() returns NULL");
+			throw std::runtime_error("CreateThread() returns NULL");
 		}
 	}
 
@@ -95,9 +95,9 @@ private:
 		return 0;
 	}
 
-	BASIC_THREAD_ROUTINE func;
 	void* data;
 	volatile bool* keepRunning;
+	BASIC_THREAD_ROUTINE func;
 	HANDLE handle;
 };
 

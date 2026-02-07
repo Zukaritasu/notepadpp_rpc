@@ -107,7 +107,7 @@ extern "C" __declspec(dllexport) FuncItem *getFuncsArray(int *nbF)
 	return funcItem;
 }
 
-bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
+bool setCommand(size_t index, const TCHAR *cmdName, PFUNCPLUGINCMD pFunc,
 				ShortcutKey *sk, bool check0nInit)
 {
 	if (index >= nbFunc)

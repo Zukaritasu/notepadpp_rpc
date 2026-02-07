@@ -1,0 +1,203 @@
+================================================================================
+  Discord RPC Plugin for Notepad++ — Build and Install (MinGW)
+================================================================================
+
+This file describes how to build the plugin with MinGW and CMake, using vcpkg
+for the yaml-cpp dependency, and how to install/copy the plugin and any
+required runtime DLLs so it works in Notepad++.
+
+--------------------------------------------------------------------------------
+1. Prerequisites
+--------------------------------------------------------------------------------
+
+Install the following before building:
+
+  • MinGW-w64 (GCC for Windows)
+    - Recommended: MSYS2 (https://www.msys2.org/). Install, then in the
+      UCRT64 or MINGW64 shell run:  pacman -S mingw-w64-ucrt-x86_64-gcc
+      (or mingw-w64-x86_64-gcc for MINGW64). This provides g++, windres, and
+      the runtime libraries.
+
+  • CMake (3.16 or newer)
+    - From https://cmake.org/download/ or:  pacman -S cmake  (in MSYS2).
+
+  • vcpkg (C/C++ package manager)
+    - Used to install yaml-cpp. See section 2.
+
+  • Notepad++ (64-bit or 32-bit, depending on how you build)
+    - The plugin must match the Notepad++ architecture (e.g. 64-bit plugin
+      for 64-bit Notepad++).
+
+Ensure the MinGW and CMake binaries are in your PATH when you open a terminal
+(e.g. use the "MSYS2 UCRT64" or "MSYS2 MINGW64" shortcut so that PATH includes
+  C:\msys64\ucrt64\bin  or  C:\msys64\mingw64\bin).
+
+--------------------------------------------------------------------------------
+2. Configure vcpkg
+--------------------------------------------------------------------------------
+
+2.1 Clone and bootstrap vcpkg (one-time setup)
+
+  cd C:\
+  git clone https://github.com/Microsoft/vcpkg.git
+  cd vcpkg
+  .\bootstrap-vcpkg.bat
+
+2.2 Add vcpkg to your PATH (optional but convenient)
+
+  Add  C:\vcpkg  to your system or user PATH so the  vcpkg  command is
+  available in any terminal. If you use a different drive or path, use that
+  path instead.
+
+2.3 Install yaml-cpp for MinGW (static build, 64-bit)
+
+  From the vcpkg directory (or any directory if vcpkg is in PATH):
+
+    vcpkg install yaml-cpp:x64-mingw-static
+
+  For 32-bit MinGW build use:
+
+    vcpkg install yaml-cpp:x86-mingw-static
+
+  This installs the static library so the plugin does not depend on a separate
+  yaml-cpp DLL. The triplet (x64-mingw-static or x86-mingw-static) must match
+  the way you will configure CMake (see below).
+
+--------------------------------------------------------------------------------
+3. Build the plugin
+--------------------------------------------------------------------------------
+
+3.1 Clone the repository and go to the project root
+
+  git clone https://github.com/Zukaritasu/notepadpp_rpc.git
+  cd notepadpp_rpc
+
+3.2 Create and use a build directory
+
+  mkdir build
+  cd build
+
+  (You can use a different directory name; the following steps assume you are
+   inside that directory and ".." is the project root.)
+
+3.3 Configure the project with CMake (MinGW, 64-bit, static triplet)
+
+  Run this from inside the  build  directory (replace the vcpkg path if yours
+  is different):
+
+  cmake -G "MinGW Makefiles" ^
+    -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ^
+    -DVCPKG_TARGET_TRIPLET=x64-mingw-static ^
+    -DCMAKE_BUILD_TYPE=Release ^
+    ..
+
+  On Unix-like shells (Git Bash, MSYS2) use backslash for line continuation:
+
+  cmake -G "MinGW Makefiles" \
+    -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+    -DVCPKG_TARGET_TRIPLET=x64-mingw-static \
+    -DCMAKE_BUILD_TYPE=Release \
+    ..
+
+  Notes:
+  • Use  C:/vcpkg  (or your actual vcpkg path). Forward slashes are fine.
+  • For 32-bit plugin, use  -DVCPKG_TARGET_TRIPLET=x86-mingw-static  and
+    ensure your MinGW is 32-bit (e.g.  -DCMAKE_CXX_FLAGS="-m32"  if using
+    a 64-bit MinGW to cross-compile; or use a 32-bit MinGW toolchain).
+  • For Debug build use  -DCMAKE_BUILD_TYPE=Debug. The DLL will then be in
+    build/bin64/debug  (or  build/bin/debug  for 32-bit).
+
+3.4 Compile
+
+  cmake --build .
+
+  The plugin DLL is produced at:
+
+  • 64-bit Release:  build/bin64/DiscordRPC.dll
+  • 64-bit Debug:    build/bin64/debug/DiscordRPC.dll
+  • 32-bit Release:  build/bin/DiscordRPC.dll
+  • 32-bit Debug:    build/bin/debug/DiscordRPC.dll
+
+--------------------------------------------------------------------------------
+4. Install the plugin so Notepad++ can load it
+--------------------------------------------------------------------------------
+
+4.1 Copy the DLL to Notepad++ plugins folder
+
+  Copy  DiscordRPC.dll  to the Notepad++ plugin directory for DiscordRPC:
+
+  • Typical 64-bit Notepad++:
+      C:\Program Files\Notepad++\plugins\DiscordRPC\
+
+  Create the  DiscordRPC  folder if it does not exist. Place  DiscordRPC.dll
+  inside it.
+
+  • Typical 32-bit Notepad++:
+      C:\Program Files (x86)\Notepad++\plugins\DiscordRPC\
+
+4.2 Copy MinGW runtime DLLs (if the plugin fails to start)
+
+  If Notepad++ does not load the plugin (e.g. "Plugin not loaded" or a
+  missing-DLL error), the plugin may be depending on MinGW runtime DLLs that
+  are not in the system PATH. Copy these DLLs from your MinGW installation
+  into the same folder as  DiscordRPC.dll  (i.e.  plugins\DiscordRPC\):
+
+  • libgcc_s_seh-1.dll   (for 64-bit MinGW; 32-bit may use libgcc_s_sjlj-1.dll)
+  • libstdc++-6.dll
+  • libwinpthread-1.dll
+
+  Where to find them (examples):
+
+  • MSYS2 UCRT64:   C:\msys64\ucrt64\bin\
+  • MSYS2 MINGW64:  C:\msys64\mingw64\bin\
+
+  Copy only the three (or two, if one is not present) into
+  Notepad++\plugins\DiscordRPC\  next to  DiscordRPC.dll.
+
+  The project’s CMake setup tries to link libgcc, libstdc++, and winpthread
+  statically so that these DLLs are not required. If your build still needs
+  them (e.g. due to toolchain or vcpkg triplet), copying them as above is
+  the standard workaround.
+
+--------------------------------------------------------------------------------
+5. Verify dependencies (optional)
+--------------------------------------------------------------------------------
+
+  On a system with  ldd  (e.g. MSYS2, Git Bash with MinGW), you can check
+  which DLLs the plugin uses:
+
+  ldd build/bin64/DiscordRPC.dll
+
+  If  libwinpthread-1.dll, libstdc++-6.dll, or  libgcc_s_*.dll  appear there,
+  you will need to copy those files to  plugins\DiscordRPC\  as in section 4.2.
+  System DLLs (e.g. KERNEL32.DLL, USER32.dll) do not need to be copied.
+
+--------------------------------------------------------------------------------
+6. Troubleshooting
+--------------------------------------------------------------------------------
+
+  • "Could not find a package configuration file provided by yaml-cpp"
+    Install yaml-cpp for the correct triplet, e.g.:
+      vcpkg install yaml-cpp:x64-mingw-static
+    and pass  -DCMAKE_TOOLCHAIN_FILE  and  -DVCPKG_TARGET_TRIPLET  as in 3.3.
+
+  • "vcpkg" or "cmake" not found
+    Add vcpkg and MinGW (and CMake if not in PATH) to your PATH, or run from
+    an MSYS2 UCRT64/MINGW64 shell where they are already set.
+
+  • windres / RC syntax error when building
+    The  .rc  file must be saved as UTF-8 (not UTF-16). Open
+    vstudio/src/PluginResources.rc  in your editor and "Save with encoding"
+    as UTF-8.
+
+  • Plugin does not load in Notepad++
+    Copy the MinGW runtime DLLs (libgcc_s_seh-1.dll, libstdc++-6.dll,
+    libwinpthread-1.dll) into  Notepad++\plugins\DiscordRPC\  as in 4.2.
+    Ensure the plugin is 64-bit for 64-bit Notepad++ and 32-bit for 32-bit.
+
+  • Building with Visual Studio instead of MinGW
+    Use the solution under  vstudio\  or configure CMake with a Visual Studio
+    generator and the vcpkg triplet  x64-windows  or  x86-windows, and
+    install  yaml-cpp:x64-windows  (or  x86-windows) with vcpkg.
+
+================================================================================

@@ -28,7 +28,7 @@ void ShowQueuedErrorIfAny() noexcept;
 const TCHAR NPP_PLUGIN_NAME[] = TEXT("Discord Rich Presence");
 const int nbFunc = 4;
 
-bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc, 
+bool setCommand(size_t index, const TCHAR *cmdName, PFUNCPLUGINCMD pFunc, 
 				ShortcutKey *sk = NULL, bool check0nInit = false);
 
 void OpenPluginOptionsDialog();

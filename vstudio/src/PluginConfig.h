@@ -39,6 +39,8 @@ struct PluginConfig
 	bool     _hide_idle_status;
 	int      _idle_time;
 
+	PluginConfig() = default;
+	PluginConfig(const PluginConfig&) = default;
 	PluginConfig& operator=(const PluginConfig& pg);
 };
 
@@ -49,7 +51,7 @@ private:
 
 	static void LoadDefaultConfig(PluginConfig& config);
 public:
-	PluginConfig GetConfig() noexcept;
+	const PluginConfig& GetConfig() noexcept;
 	bool SetConfig(const PluginConfig& newConfig, bool save = false) noexcept;
 	void LoadConfig();
 	bool SaveConfig();
