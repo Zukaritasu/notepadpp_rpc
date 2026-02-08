@@ -96,6 +96,7 @@ target_link_libraries(DiscordRPC PRIVATE
 # Use vcpkg triplet x64-mingw-static (or x86-mingw-static) so yaml-cpp is also static
 if(MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32))
   target_link_options(DiscordRPC PRIVATE
+    -static
     -static-libgcc
     -static-libstdc++
   )
@@ -110,7 +111,7 @@ target_link_libraries(DiscordRPC PRIVATE yaml-cpp::yaml-cpp)
 # MinGW: link winpthread statically *after* yaml-cpp so the linker uses .a instead of the DLL
 if(MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32))
   # Must appear after yaml-cpp so linker picks static libwinpthread.a
-  target_link_libraries(DiscordRPC PRIVATE -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic)
+  target_link_libraries(DiscordRPC PRIVATE winpthread)
   message(STATUS "MinGW: linking winpthread statically (no libwinpthread-1.dll required)")
 endif()
 
