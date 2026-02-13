@@ -3,7 +3,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/license/Zukaritasu/notepadpp_rpc">
-  <img src="https://img.shields.io/github/downloads/Zukaritasu/notepadpp_rpc/total">
+  <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/zukaritasu/notepadpp_rpc/total">
   <img src="https://img.shields.io/github/v/release/Zukaritasu/notepadpp_rpc">
 </p>
 
