@@ -25,7 +25,6 @@
 #define IDS_HIDE_PRIVATE_FILES          117
 #define IDS_HIDE_IDLE_STATUS            118
 #define IDC_SPIN1                       1000
-#define RPC_UPDATE_TIME                 1000
 #define DEF_REFRESH_TIME                1000
 #define IDC_EDIT_CID                    1003
 #define IDC_CLIENT_ID                   1004
