@@ -26,16 +26,35 @@
 #include <atomic>
 
 #ifdef _DEBUG
-#include <cstdio>
+	#include <cstdio>
 #endif // _DEBUG
 
 #include <tchar.h>
 #include <shlwapi.h>
 #include <commctrl.h>
 #include <algorithm>
-#pragma comment(lib, "Comctl32.lib")
 
 #pragma warning(disable : 4100 4996)
+
+////////////////////////////////////////////
+
+/**
+ * What does this module do? 
+ * 
+ * It contains the main functions that Notepad++ calls when loading the module,
+ * notifying events, or closing it. When Notepad++ loads the module, it calls a
+ * series of functions, but the main one is the setInfo function, whose task is
+ * to initialize the nppData field, load the plugin configuration, specify the
+ * menu options, and initialize rich presence.
+ * 
+ * The beNotified function is called by Notepad++ to send events to this module,
+ * but most are downloaded and only those necessary for the optimal functioning
+ * of the module are retained.
+ * 
+ * The rest of the declared functions are called by Notepad++ to identify the
+ * module, and the others are part of the module's menu options.
+ * 
+ */
 
 ////////////////////////////////////////////
 
@@ -130,6 +149,12 @@ void About()
 			   MB_ICONINFORMATION | MB_OK);
 }
 
+/**
+ * @brief Notepad++ and Scintilla notifications
+ * 
+ * Most notifications are discarded and only those necessary for the
+ * optimal functioning of the plugin are retained.
+ */
 extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 {
 	ShowQueuedErrorIfAny();
@@ -170,6 +195,11 @@ void OpenPluginOptionsDialog()
 	ShowPluginDlgOption();
 }
 
+/**
+ * @brief Open the plugin configuration file in the Notepad++ editor.
+ * 
+ * If the file does not exist or an error occurs, it will not open.
+ */
 void OpenConfigurationFile()
 {
 	auto configDir = TextEditorInfo::GetEditorTextPropertyW(NPPM_GETPLUGINSCONFIGDIR);
