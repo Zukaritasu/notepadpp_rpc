@@ -47,7 +47,7 @@ public:
 	const LanguageInfo& GetLanguageInfo() const noexcept;
 	const std::string& GetCurrentRepositoryUrl() const noexcept { return currentRepositoryUrl; }
 	bool IsCurrentFilePrivate() noexcept;
-	bool IsTextEditorIdle() const noexcept { return _textEditorIdle; }
+	bool IsTextEditorIdling() const noexcept { return _textEditorIdling; }
 
 	static std::wstring GetEditorTextPropertyW(int prop);
 
@@ -71,7 +71,7 @@ private:
 	FileInfo _info{};
 	LanguageInfo _lang_info;
 	FileFilter _fileFilter{};
-	bool _textEditorIdle = false;
+	bool _textEditorIdling = false;
 	__int64 _lastFileLength = 0;
 
 	bool ContainsTag(const char* format, const char* tag, size_t pos) noexcept;

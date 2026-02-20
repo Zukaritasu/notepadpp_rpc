@@ -114,7 +114,7 @@ void TextEditorInfo::LoadEditorStatus() noexcept
 	}
 	currentRepositoryUrl = repoUrl;
 
-	_textEditorIdle = (oldCurrentLine == (int)props[2] && oldCurrentColumn == (int)props[3] && oldFileLength == _lastFileLength);
+	_textEditorIdling = (oldCurrentLine == (int)props[2] && oldCurrentColumn == (int)props[3] && oldFileLength == _lastFileLength);
 }
 
 void TextEditorInfo::WriteFormat(std::string& buffer, const char* format) noexcept
