@@ -31,7 +31,7 @@
 
 #include "PluginError.h"
 
-#pragma warning(disable : 4996)
+constexpr DWORD THREAD_UPDATE_INTERVAL_MS = 1000;
 
 namespace
 {
@@ -48,7 +48,7 @@ void RichPresence::InitializePresence()
 		try
 		{
 			_callbacks = new BasicThread(RichPresence::CallBacks, this);
-			_idleTimer = new BasicThread(RichPresence::IdleTimer, this);
+			_idleTimer = new BasicThread(RichPresence::IdlingTimer, this);
 		}
 		catch (const std::exception &exception)
 		{
@@ -80,7 +80,7 @@ void RichPresence::Update() noexcept
 		_pTemp = _p;
 		if (_drp.IsConnected())
 		{
-			_drp.SetPresence(_p);
+			_drp.SetPresence(_p, _editorInfo.IsTextEditorIdling());
 		}
 		return;
 	}
@@ -99,7 +99,7 @@ void RichPresence::Update() noexcept
 	_pTemp = _p;
 	if (_drp.IsConnected())
 	{
-		_drp.SetPresence(_p);
+		_drp.SetPresence(_p, _editorInfo.IsTextEditorIdling());
 	}
 }
 
@@ -127,12 +127,13 @@ void RichPresence::UpdateAssets() noexcept
 	_p.smallText = _p.smallImage =
 		_p.largeText = _p.largeImage = "";
 
-	if (!configManager.GetConfig()._lang_image)
+	bool isFileEmpty = _editorInfo.IsFileInfoEmpty();
+	if (!configManager.GetConfig()._lang_image || isFileEmpty)
 	{
 		_p.largeImage = NPP_DEFAULTIMAGE;
 		_p.largeText = NPP_NAME;
 	}
-	else if (!_editorInfo.IsFileInfoEmpty())
+	else
 	{
 		_p.largeImage = _editorInfo.GetLanguageInfo()._large_image;
 		_editorInfo.WriteFormat(_p.largeText, configManager.GetConfig()._large_text_format);
@@ -141,11 +142,6 @@ void RichPresence::UpdateAssets() noexcept
 			_p.smallImage = NPP_DEFAULTIMAGE;
 			_p.smallText = NPP_NAME;
 		}
-	}
-	else
-	{
-		_p.largeImage = NPP_DEFAULTIMAGE;
-		_p.largeText = NPP_NAME;
 	}
 }
 
@@ -174,15 +170,19 @@ void RichPresence::CallBacks(void *data, volatile bool *keepRunning) noexcept
 			if (!(*keepRunning))
 				return;
 
-			// Set the start time to the current time
-			rpc->_p.startTime = std::chrono::duration_cast<std::chrono::seconds>(
-									std::chrono::system_clock::now().time_since_epoch())
-									.count();
-
 			Presence pTemp = rpc->_pTemp;
-			pTemp.startTime = rpc->_p.startTime;
 
-			drp.SetPresence(pTemp);
+			{
+				AutoUnlock lock(rpc->_mutex);
+				// Set the start time to the current time
+				rpc->_p.startTime = std::chrono::duration_cast<std::chrono::seconds>(
+										std::chrono::system_clock::now().time_since_epoch())
+										.count();
+				pTemp.startTime = rpc->_p.startTime;
+			}
+
+			drp.SetPresence(pTemp, false);
+
 			while (*keepRunning)
 			{
 				drp.Update();
@@ -199,38 +199,42 @@ void RichPresence::CallBacks(void *data, volatile bool *keepRunning) noexcept
 	}
 }
 
-void RichPresence::IdleTimer(void *data, volatile bool *keepRunning) noexcept
+void RichPresence::IdlingTimer(void *data, volatile bool *keepRunning) noexcept
 {
 	try
 	{
 		RichPresence *rpc = reinterpret_cast<RichPresence *>(data);
 
-		bool isIdle = false;
+		bool isIdling = false;
 
 		while (*keepRunning)
 		{
-			BasicThread::Sleep(keepRunning, 1000);
+			BasicThread::Sleep(keepRunning, THREAD_UPDATE_INTERVAL_MS);
 			if (configManager.GetConfig()._hide_idle_status)
 				continue;
 
 			if (rpc->_drp.LastUpdateTimeElapsed(configManager.GetConfig()._idle_time))
 			{
-				if (isIdle)
+				if (isIdling)
 					continue;
-				isIdle = true;
+				isIdling = true;
 
 				Presence p;
-
-				p.details = "Idle";
+				p.details = "Idling";
 				p.largeText = NPP_NAME;
 				p.largeImage = NPP_IDLEIMAGE;
-				p.startTime = rpc->_p.startTime;
 
-				rpc->_drp.SetIdleStatus(p);
+				{
+					AutoUnlock lock(rpc->_mutex);
+					p.startTime = rpc->_p.startTime;
+				}
+
+				rpc->_drp.SetIdleStatus(&p);
 			}
-			else
+			else if (isIdling)
 			{
-				isIdle = false;
+				isIdling = false;
+				rpc->_drp.SetIdleStatus(nullptr);
 			}
 		}
 	}

@@ -61,8 +61,12 @@ private:
 	
 	DiscordRichPresence _drp;
 	Presence            _p;
+
+	// Allows you to save the presence status for use in a reconnection or
+	// other factor that momentarily interrupts the presence update. It is
+	// stored in a temporary variable.
 	PresenceTemp        _pTemp;
-				
+	
 	TextEditorInfo		_editorInfo;
 
 	// Thread that calls the Discord callbacks every few seconds
@@ -70,9 +74,13 @@ private:
 	// Thread that increments the idle time counter every second
 	BasicThread*        _idleTimer  = nullptr;
 
+	// Avoid multithreaded access to fields of the Presence _p object,
+	// such as @field startTime.
+	BasicMutex          _mutex;
+
 	void UpdateAssets() noexcept;
 	void Connect(volatile bool* keepRunning = nullptr) noexcept;
 
 	static void CallBacks(void* data, volatile bool* keepRunning = nullptr) noexcept;
-	static void IdleTimer(void* data, volatile bool* keepRunning = nullptr) noexcept;
+	static void IdlingTimer(void* data, volatile bool* keepRunning = nullptr) noexcept;
 };

@@ -26,23 +26,23 @@
 #include <memory>
 #include "PluginThread.h"
 
-typedef std::function<void(const std::string&)> Exception;
+typedef std::function<void(const std::string &)> Exception;
 
-struct Presence {
+struct Presence
+{
     std::string state;
     std::string details;
     std::string largeImage;
     std::string largeText;
     std::string smallImage;
     std::string smallText;
-	std::string repositoryUrl;
-    int64_t startTime;
-    int64_t endTime;
-	bool enableButtonRepository;
-    
-    Presence() : startTime(0), endTime(0), enableButtonRepository(false) {}
+    std::string repositoryUrl;
+    int64_t startTime = 0;
+    int64_t endTime = 0;
+    bool enableButtonRepository = false;
 
-    bool compare(const Presence& other) const {
+    bool compare(const Presence &other) const
+    {
         return state == other.state &&
                details == other.details &&
                largeImage == other.largeImage &&
@@ -53,59 +53,65 @@ struct Presence {
                startTime == other.startTime &&
                endTime == other.endTime &&
                enableButtonRepository == other.enableButtonRepository;
-	}
+    }
 };
 
-struct DiscordIPCHeader {
+struct DiscordIPCHeader
+{
     uint32_t opcode;
     uint32_t length;
 };
 
-class DiscordRichPresence {
+class DiscordRichPresence
+{
 private:
     static constexpr size_t MAX_MESSAGE_SIZE = 16384;
     static constexpr int MAX_PIPE_ATTEMPTS = 10;
     static constexpr int PING_INTERVAL = 1800;
     static constexpr int MIN_STRING_LENGTH = 2;
-    
+
     BasicMutex m_mutex;
-    HANDLE m_pipe;
+    HANDLE m_pipe = INVALID_HANDLE_VALUE;
     bool m_connected;
-    int m_pingCounter;
     std::atomic<__int64> m_lastUpdateTime;
-	struct Presence m_presence;
-    
-    bool sendDiscordMessageSync(uint32_t opcode, const std::string& json, Exception exc);
+    struct Presence m_presence;
+
+    // It is initialized with the SetIdleStatus and SetPresence functions.
+    std::string m_lastJsonSent;
+
+    bool UpdatePresence(const Presence &presence, Exception exc) noexcept;
+    bool sendDiscordMessageSync(uint32_t opcode, const std::string &json, Exception exc);
     bool connectToDiscord(__int64 clientId, Exception exc);
     void disconnect();
-    std::string generateNonce() const;
-    std::string escapeJsonString(const std::string& str) const;
-    
-public:
 
+    std::string presenceToJson(const Presence &presence);
+    std::string generateNonce() const;
+    std::string escapeJsonString(const std::string &str) const;
+
+public:
     /**
      * @brief Default constructor for DiscordRichPresence
      * @details Initializes the instance with default values
      */
     DiscordRichPresence() noexcept;
-    
+
     /**
      * @brief Destructor for DiscordRichPresence
      * @details Closes the connection and releases resources
      */
     ~DiscordRichPresence();
-    
+
     // Disable copy constructor and assignment operator
-    DiscordRichPresence(const DiscordRichPresence&) = delete;
-    DiscordRichPresence& operator=(const DiscordRichPresence&) = delete;
-    
+    DiscordRichPresence(const DiscordRichPresence &) = delete;
+    DiscordRichPresence &operator=(const DiscordRichPresence &) = delete;
+
     /**
      * @brief Updates the presence in Discord
      * @param exc Exception callback function (optional)
      * @details Sends the currently configured presence to Discord
      */
     void Update(Exception exc = nullptr) noexcept;
-    
+
     /**
      * @brief Connects to Discord using the client ID
      * @param clientId Discord application ID
@@ -113,36 +119,47 @@ public:
      * @return true if connection was successful, false otherwise
      */
     bool Connect(__int64 clientId, Exception exc = nullptr) noexcept;
-    
+
     /**
      * @brief Closes the connection with Discord
      * @param exc Exception callback function (optional)
      * @details Disconnects and cleans up the IPC connection with Discord
      */
     void Close(Exception exc = nullptr) noexcept;
-    
+
     /**
      * @brief Sets the presence information
      * @param presence Structure containing the presence data to display
+     * @param isIdling If the argument is false, the m_lastUpdateTime field is reset
      * @param exc Exception callback function (optional)
      * @return true if set successfully, false otherwise
      */
-    bool SetPresence(const Presence& presence, Exception exc = nullptr) noexcept;
+    bool SetPresence(const Presence &presence, bool isIdling, Exception exc = nullptr) noexcept;
 
-    bool SetIdleStatus(const Presence& presence, Exception exc = nullptr) noexcept;
-    
+    /**
+     * @brief Enable idling status in Rich Presence
+     * 
+     * @param presence Structure containing the presence data to display. 
+     * If the argument is null, disable the idling state
+     * @param exc Exception callback function (optional)
+     * @return false if the pipe connection is not working
+     */
+    bool SetIdleStatus(const Presence *presence, Exception exc = nullptr) noexcept;
+
     /**
      * @brief Checks if connected to Discord
      * @return true if connected, false otherwise
      */
     bool IsConnected() const noexcept { return m_connected; }
 
-
-    bool LastUpdateTimeElapsed(int64_t elapsed) const noexcept {
+    bool LastUpdateTimeElapsed(int64_t elapsed) const noexcept
+    {
         return (std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count() - m_lastUpdateTime.load()) >= elapsed;
-	}
-    
+                    std::chrono::system_clock::now().time_since_epoch())
+                    .count() -
+                m_lastUpdateTime.load()) >= elapsed;
+    }
+
     /**
      * @brief Verifies the connection status with Discord
      * @param exc Exception callback function (optional)
