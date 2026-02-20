@@ -170,7 +170,7 @@ static bool InitializeControls(HWND hWnd, const PluginConfig& pConfig, bool init
 	SetButtonCheck(IDC_HIDE_IDLE_STATUS,   pConfig._hide_idle_status);
 
 	// The available tags that will be displayed in the combobox
-	TCHAR* tags[] = 
+	const TCHAR* const tags[] = 
 	{ 
 		_T("%(file)"), _T("%(line)"), _T("%(column)"), _T("%(size)"),
 		_T("%(line_count)"), _T("%(extension)"), _T("%(lang)"), _T("%(Lang)"),
