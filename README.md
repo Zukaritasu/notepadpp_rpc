@@ -71,3 +71,4 @@ You can find the latest supported redistributable packages on Microsoft’s offi
 ## Libraries used
 
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp)
+* [nlohmann/json](https://github.com/nlohmann/json)
