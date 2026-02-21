@@ -18,6 +18,9 @@
 #include <sstream>
 #include <chrono>
 #include <random>
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 DiscordRichPresence::DiscordRichPresence() noexcept
     : m_pipe(INVALID_HANDLE_VALUE), m_connected(false)
@@ -32,93 +35,56 @@ DiscordRichPresence::~DiscordRichPresence()
     Close();
 }
 
+/**
+ * @brief Converts a Presence structure to a JSON string
+ * @param presence The presence data to convert
+ * @return JSON string representing the presence
+ */
 std::string DiscordRichPresence::presenceToJson(const Presence &presence)
 {
-    size_t estimatedSize = 200 + presence.state.size() + presence.details.size() +
-                           presence.largeImage.size() + presence.largeText.size() +
-                           presence.smallImage.size() + presence.smallText.size();
+    json j;
+    j["cmd"] = "SET_ACTIVITY";
+    j["nonce"] = generateNonce();
 
-    std::string activityJson;
-    activityJson.reserve(estimatedSize);
+    auto &args = j["args"];
+    args["pid"] = ::GetCurrentProcessId();
 
-    activityJson = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId()) + R"(,"activity":{)";
+    auto &activity = args["activity"];
 
-    bool needComma = false;
     if (presence.state.size() >= MIN_STRING_LENGTH)
-    {
-        activityJson += R"("state":")" + escapeJsonString(presence.state) + R"(")";
-        needComma = true;
-    }
+        activity["state"] = presence.state;
+
     if (presence.details.size() >= MIN_STRING_LENGTH)
-    {
-        if (needComma)
-            activityJson += ",";
-        activityJson += R"("details":")" + escapeJsonString(presence.details) + R"(")";
-        needComma = true;
-    }
+        activity["details"] = presence.details;
 
     if (presence.startTime > 0)
     {
-        if (needComma)
-            activityJson += ",";
-        activityJson += R"("timestamps":{"start":)" + std::to_string(presence.startTime);
+        activity["timestamps"]["start"] = presence.startTime;
         if (presence.endTime > 0)
-        {
-            activityJson += R"(,"end":)" + std::to_string(presence.endTime);
-        }
-        activityJson += "}";
-        needComma = true;
+            activity["timestamps"]["end"] = presence.endTime;
     }
 
-    if (!presence.largeImage.empty() || !presence.smallImage.empty() ||
-        !presence.largeText.empty() || !presence.smallText.empty())
-    {
-        if (needComma)
-            activityJson += ",";
-        activityJson += R"("assets":{)";
+    json assets = json::object();
+    if (!presence.largeImage.empty())
+        assets["large_image"] = presence.largeImage;
+    if (presence.largeText.size() >= MIN_STRING_LENGTH)
+        assets["large_text"] = presence.largeText;
+    if (!presence.smallImage.empty())
+        assets["small_image"] = presence.smallImage;
+    if (presence.smallText.size() >= MIN_STRING_LENGTH)
+        assets["small_text"] = presence.smallText;
 
-        bool hasAssets = false;
-        if (!presence.largeImage.empty())
-        {
-            activityJson += R"("large_image":")" + escapeJsonString(presence.largeImage) + R"(")";
-            hasAssets = true;
-        }
-        if (presence.largeText.size() >= MIN_STRING_LENGTH)
-        {
-            if (hasAssets)
-                activityJson += ",";
-            activityJson += R"("large_text":")" + escapeJsonString(presence.largeText) + R"(")";
-            hasAssets = true;
-        }
-        if (!presence.smallImage.empty())
-        {
-            if (hasAssets)
-                activityJson += ",";
-            activityJson += R"("small_image":")" + escapeJsonString(presence.smallImage) + R"(")";
-            hasAssets = true;
-        }
-        if (presence.smallText.size() >= MIN_STRING_LENGTH)
-        {
-            if (hasAssets)
-                activityJson += ",";
-            activityJson += R"("small_text":")" + escapeJsonString(presence.smallText) + R"(")";
-        }
-
-        activityJson += "}";
-        needComma = true;
-    }
+    if (!assets.empty())
+        activity["assets"] = assets;
 
     if (presence.enableButtonRepository && !presence.repositoryUrl.empty())
     {
-        if (needComma)
-            activityJson += ",";
-        activityJson += R"("buttons":[{"label":"View Repository","url":")" + escapeJsonString(presence.repositoryUrl) + R"("}])";
-        needComma = true;
+        activity["buttons"] = json::array({
+            {{"label", "View Repository"}, {"url", presence.repositoryUrl}}
+        });
     }
 
-    activityJson += R"(}},"nonce":")" + generateNonce() + R"("})";
-
-    return activityJson;
+    return j.dump();
 }
 
 std::string DiscordRichPresence::generateNonce() const
@@ -177,7 +143,7 @@ std::string DiscordRichPresence::escapeJsonString(const std::string &str) const
     return escaped;
 }
 
-bool DiscordRichPresence::connectToDiscord(__int64 clientId, Exception exc)
+bool DiscordRichPresence::connectToDiscord(__int64 clientId, ErrorCallback exc)
 {
     if (m_pipe != INVALID_HANDLE_VALUE)
     {
@@ -236,8 +202,7 @@ namespace
         UniqueHandle ovHandle(ov.hEvent);
 
         DWORD written = 0;
-        BOOL ok = ::WriteFile(pipe, buffer, size, &written, &ov);
-        if (!ok)
+        if (!WriteFile(pipe, buffer, size, &written, &ov))
         {
             DWORD err = ::GetLastError();
             if (err != ERROR_IO_PENDING)
@@ -278,8 +243,7 @@ namespace
 
         UniqueHandle ovHandle(ov.hEvent);
 
-        BOOL ok = ::ReadFile(pipe, buffer, size, &bytesReadOut, &ov);
-        if (!ok)
+        if (!ReadFile(pipe, buffer, size, &bytesReadOut, &ov))
         {
             DWORD err = ::GetLastError();
             if (err != ERROR_IO_PENDING)
@@ -304,7 +268,7 @@ namespace
     }
 }
 
-bool DiscordRichPresence::UpdatePresence(const Presence &presence, Exception exc) noexcept
+bool DiscordRichPresence::UpdatePresence(const Presence &presence, ErrorCallback exc) noexcept
 {
     if (!m_connected || m_pipe == INVALID_HANDLE_VALUE)
     {
@@ -313,47 +277,15 @@ bool DiscordRichPresence::UpdatePresence(const Presence &presence, Exception exc
         return false;
     }
 
-    DWORD bytesAvailable;
-    if (!::PeekNamedPipe(m_pipe, NULL, 0, NULL, &bytesAvailable, NULL))
-    {
-        m_connected = false;
-        if (exc)
-            exc("Lost connection to Discord");
-        return false;
-    }
-
     m_lastJsonSent = presenceToJson(presence);
     return sendDiscordMessageSync(1, m_lastJsonSent, exc);
 }
 
-bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::string &json, Exception exc)
+bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::string &json, ErrorCallback exc)
 {
-    if (m_pipe == INVALID_HANDLE_VALUE)
-    {
-        if (exc)
-            exc("Pipe is not valid");
-        return false;
-    }
-
-    DWORD bytesAvailable;
-    if (!::PeekNamedPipe(m_pipe, NULL, 0, NULL, &bytesAvailable, NULL))
-    {
-        if (exc)
-            exc("Lost connection to Discord");
-        disconnect();
-        return false;
-    }
-
-    if (json.size() > MAX_MESSAGE_SIZE)
-    {
-        if (exc)
-            exc("Message size exceeds maximum limit");
-        return false;
-    }
-
-    DiscordIPCHeader header{};
-    header.opcode = opcode;
-    header.length = static_cast<uint32_t>(json.size());
+    DiscordIPCHeader header { 
+        opcode, static_cast<uint32_t>(json.size()) 
+    };
 
     if (!writeWithTimeout(m_pipe, &header, sizeof(header), PIPE_WRITE_TIMEOUT_MS))
         return false;
@@ -372,17 +304,9 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
         return false;
     }
 
-    if (responseHeader.length > MAX_MESSAGE_SIZE)
-    {
-        if (exc)
-            exc("Response size exceeds maximum limit");
-        return false;
-    }
-
     if (responseHeader.length > 0)
     {
-        std::string response;
-        response.resize(responseHeader.length);
+        std::string response(responseHeader.length, '\0');
         if (!readWithTimeout(m_pipe, response.data(), responseHeader.length, PIPE_READ_TIMEOUT_MS, bytesRead) ||
             bytesRead != responseHeader.length)
         {
@@ -391,61 +315,31 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
             return false;
         }
 
-        std::string_view responseView(response);
-
-        if (responseView.find("\"evt\":\"READY\"") != std::string_view::npos ||
-            responseView.find("\"cmd\":\"SET_ACTIVITY\"") != std::string_view::npos ||
-            responseView.find("\"code\":0") != std::string_view::npos ||
-            responseView.find("\"data\"") != std::string_view::npos)
+        try
         {
+            nlohmann::json j = json::parse(response);
+            if (j.contains("evt") && j["evt"] == "ERROR")
+            {
+                std::string errorCode = j.contains("code") ? j["code"].dump() : "Unknown";
+                std::string errorMessage = j.contains("message") ? j["message"].dump() : "Discord Error";
+                if (exc)
+                    exc("Discord Error " + errorCode + ": " + errorMessage);
+                return false;
+            }
             return true;
         }
-
-        if (responseView.find("\"evt\":\"ERROR\"") != std::string_view::npos ||
-            responseView.find("\"code\":") != std::string_view::npos)
+        catch (const json::parse_error &e)
         {
-
-            std::string errorCode = "Unknown";
-            std::string errorMessage = "Discord Error";
-
-            size_t codePos = responseView.find("\"code\":");
-            if (codePos != std::string_view::npos)
-            {
-                size_t codeStart = codePos + 7;
-                size_t codeEnd = responseView.find_first_of(",}", codeStart);
-                if (codeEnd != std::string_view::npos)
-                {
-                    errorCode = std::string(responseView.substr(codeStart, codeEnd - codeStart));
-                }
-            }
-
-            size_t messagePos = responseView.find("\"message\":");
-            if (messagePos != std::string_view::npos)
-            {
-                size_t msgStart = messagePos + 10;
-                size_t quoteStart = responseView.find("\"", msgStart);
-                if (quoteStart != std::string_view::npos)
-                {
-                    size_t quoteEnd = responseView.find("\"", quoteStart + 1);
-                    if (quoteEnd != std::string_view::npos)
-                    {
-                        errorMessage = std::string(responseView.substr(quoteStart + 1, quoteEnd - quoteStart - 1));
-                    }
-                }
-            }
-
             if (exc)
-                exc("Discord Error " + errorCode + ": " + errorMessage);
+                exc("Failed to parse Discord response: " + std::string(e.what()));
             return false;
         }
-
-        return true;
     }
 
     return true;
 }
 
-void DiscordRichPresence::Update(Exception exc) noexcept
+void DiscordRichPresence::Update(ErrorCallback exc) noexcept
 {
     AutoUnlock lock(m_mutex);
     if (!m_connected || m_pipe == INVALID_HANDLE_VALUE || m_lastJsonSent.empty())
@@ -458,35 +352,27 @@ void DiscordRichPresence::Update(Exception exc) noexcept
     }
 }
 
-bool DiscordRichPresence::Connect(__int64 clientId, Exception exc) noexcept
+bool DiscordRichPresence::Connect(__int64 clientId, ErrorCallback exc) noexcept
 {
     AutoUnlock lock(m_mutex);
     if (!m_connected)
-    {
         return m_connected = connectToDiscord(clientId, exc);
-    }
     return true;
 }
 
-void DiscordRichPresence::Close(Exception exc) noexcept
+void DiscordRichPresence::Close(ErrorCallback exc) noexcept
 {
     AutoUnlock lock(m_mutex);
     if (m_connected && m_pipe != INVALID_HANDLE_VALUE)
     {
-        try
-        {
-            std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId())
-                 + R"(,"activity":null},"nonce":")" + generateNonce() + R"("})";
-            sendDiscordMessageSync(1, clearActivity, exc);
-        }
-        catch (...)
-        {
-        }
+        std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId())
+            + R"(,"activity":null},"nonce":")" + generateNonce() + R"("})";
+        sendDiscordMessageSync(1, clearActivity, exc);
         disconnect();
     }
 }
 
-bool DiscordRichPresence::SetPresence(const Presence &presence, bool isIdling, Exception exc) noexcept
+bool DiscordRichPresence::SetPresence(const Presence &presence, bool isIdling, ErrorCallback exc) noexcept
 {
     AutoUnlock lock(m_mutex);
 
@@ -504,7 +390,7 @@ bool DiscordRichPresence::SetPresence(const Presence &presence, bool isIdling, E
     return UpdatePresence(presence, exc);
 }
 
-bool DiscordRichPresence::SetIdleStatus(const Presence *presence, Exception exc) noexcept
+bool DiscordRichPresence::SetIdleStatus(const Presence *presence, ErrorCallback exc) noexcept
 {
     AutoUnlock lock(m_mutex);
 
@@ -515,92 +401,9 @@ bool DiscordRichPresence::SetIdleStatus(const Presence *presence, Exception exc)
         return false;
     }
 
-    DWORD bytesAvailable;
-    if (!::PeekNamedPipe(m_pipe, NULL, 0, NULL, &bytesAvailable, NULL))
-    {
-        m_connected = false;
-        if (exc)
-            exc("Lost connection to Discord");
-        return false;
-    }
-
-    if (!presence)
-    {
-        m_lastJsonSent = presenceToJson(m_presence);
-        return sendDiscordMessageSync(1, m_lastJsonSent, exc);
-    }
-
-    std::string idleJson;
-
-    idleJson = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId()) + R"(,"activity":{)";
-
-    bool needComma = false;
-
-    if (presence->details.size() >= MIN_STRING_LENGTH)
-    {
-        if (needComma)
-            idleJson += ",";
-        idleJson += R"("details":")" + escapeJsonString(presence->details) + R"(")";
-        needComma = true;
-    }
-
-    if (presence->startTime > 0)
-    {
-        if (needComma)
-            idleJson += ",";
-        idleJson += R"("timestamps":{"start":)" + std::to_string(presence->startTime);
-
-        if (presence->endTime > 0)
-            idleJson += R"(,"end":)" + std::to_string(presence->endTime);
-        idleJson += "}";
-        needComma = true;
-    }
-
-    if (needComma)
-        idleJson += ",";
-    idleJson += R"("assets":{)";
-
-    bool hasAssets = false;
-    if (!presence->largeImage.empty())
-    {
-        idleJson += R"("large_image":")" + escapeJsonString(presence->largeImage) + R"(")";
-        hasAssets = true;
-    }
-
-    if (presence->largeText.size() >= MIN_STRING_LENGTH)
-    {
-        if (hasAssets)
-            idleJson += ",";
-        idleJson += R"("large_text":")" + escapeJsonString(presence->largeText) + R"(")";
-        hasAssets = true;
-    }
-
-    idleJson += R"(}}},"nonce":")" + generateNonce() + R"("})";
-
-    m_lastJsonSent = idleJson;
-
-    return sendDiscordMessageSync(1, idleJson, exc);
-}
-
-bool DiscordRichPresence::CheckConnection(Exception exc) noexcept
-{
-    AutoUnlock lock(m_mutex);
-    if (m_pipe == INVALID_HANDLE_VALUE || !m_connected)
-    {
-        if (exc)
-            exc("Not connected to Discord");
-        return false;
-    }
-
-    DWORD bytesAvailable;
-    if (!::PeekNamedPipe(m_pipe, NULL, 0, NULL, &bytesAvailable, NULL))
-    {
-        if (exc)
-            exc("Lost connection to Discord");
-        return false;
-    }
-
-    return sendDiscordMessageSync(1, R"({"cmd":"DISPATCH","evt":"READY"})", exc);
+    // If no presence is provided, use the last known presence
+    m_lastJsonSent = presenceToJson(!presence ? m_presence : *presence);
+    return sendDiscordMessageSync(1, m_lastJsonSent, exc);
 }
 
 void DiscordRichPresence::disconnect()
