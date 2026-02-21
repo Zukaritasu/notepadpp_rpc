@@ -31,15 +31,20 @@
 
 #include "PluginError.h"
 
-constexpr DWORD THREAD_UPDATE_INTERVAL_MS = 1000;
-
-namespace
-{
-	constexpr const char *NPP_NAME = "Notepad++";
-}
+static constexpr DWORD THREAD_UPDATE_INTERVAL_MS = 1000;
+static constexpr const char *NPP_NAME = "Notepad++";
 
 extern ConfigManager configManager;
 extern NppData nppData;
+
+/**
+ * @brief Callback for Discord errors
+ * @param message Error message
+ */
+static void DiscordErrorCallback(const std::string &message) noexcept
+{
+	printf("Discord Error: %s\n", message.c_str());
+}
 
 void RichPresence::InitializePresence()
 {
@@ -80,7 +85,8 @@ void RichPresence::Update() noexcept
 		_pTemp = _p;
 		if (_drp.IsConnected())
 		{
-			_drp.SetPresence(_p, _editorInfo.IsTextEditorIdling());
+			_drp.SetPresence(_p, _editorInfo.IsTextEditorIdling(),
+				DiscordErrorCallback);
 		}
 		return;
 	}
@@ -99,7 +105,8 @@ void RichPresence::Update() noexcept
 	_pTemp = _p;
 	if (_drp.IsConnected())
 	{
-		_drp.SetPresence(_p, _editorInfo.IsTextEditorIdling());
+		_drp.SetPresence(_p, _editorInfo.IsTextEditorIdling(),
+			DiscordErrorCallback);
 	}
 }
 
@@ -119,7 +126,7 @@ void RichPresence::Close() noexcept
 	SafeStopAndDelete(_callbacks);
 	SafeStopAndDelete(_idleTimer);
 
-	_drp.Close();
+	_drp.Close(DiscordErrorCallback);
 }
 
 void RichPresence::UpdateAssets() noexcept
@@ -149,7 +156,8 @@ void RichPresence::Connect(volatile bool *keepRunning) noexcept
 {
 	while (keepRunning && *keepRunning)
 	{
-		if (_drp.Connect(configManager.GetConfig()._client_id))
+		if (_drp.Connect(configManager.GetConfig()._client_id,
+				DiscordErrorCallback))
 			break;
 		BasicThread::Sleep(keepRunning, RPC_TIME_RECONNECTION);
 	}
@@ -163,6 +171,9 @@ void RichPresence::CallBacks(void *data, volatile bool *keepRunning) noexcept
 	{
 		RichPresence *rpc = reinterpret_cast<RichPresence *>(data);
 		DiscordRichPresence &drp = rpc->_drp;
+		// Determines whether a new start timestamp should be generated for Discord presence.
+		// Set to false after the first connection to maintain persistence during reconnections
+		bool shouldInitializeTime = true;
 
 		while (*keepRunning)
 		{
@@ -172,6 +183,7 @@ void RichPresence::CallBacks(void *data, volatile bool *keepRunning) noexcept
 
 			Presence pTemp = rpc->_pTemp;
 
+			if (shouldInitializeTime)
 			{
 				AutoUnlock lock(rpc->_mutex);
 				// Set the start time to the current time
@@ -179,13 +191,14 @@ void RichPresence::CallBacks(void *data, volatile bool *keepRunning) noexcept
 										std::chrono::system_clock::now().time_since_epoch())
 										.count();
 				pTemp.startTime = rpc->_p.startTime;
+				shouldInitializeTime = false;
 			}
 
-			drp.SetPresence(pTemp, false);
+			drp.SetPresence(pTemp, false, DiscordErrorCallback);
 
 			while (*keepRunning)
 			{
-				drp.Update();
+				drp.Update(DiscordErrorCallback);
 				if (!*keepRunning || !drp.IsConnected())
 					break;
 				BasicThread::Sleep(keepRunning, RPC_UPDATE_TIME);
@@ -229,12 +242,12 @@ void RichPresence::IdlingTimer(void *data, volatile bool *keepRunning) noexcept
 					p.startTime = rpc->_p.startTime;
 				}
 
-				rpc->_drp.SetIdleStatus(&p);
+				rpc->_drp.SetIdleStatus(&p, DiscordErrorCallback);
 			}
 			else if (isIdling)
 			{
 				isIdling = false;
-				rpc->_drp.SetIdleStatus(nullptr);
+				rpc->_drp.SetIdleStatus(nullptr, DiscordErrorCallback);
 			}
 		}
 	}
