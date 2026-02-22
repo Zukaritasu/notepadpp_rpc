@@ -45,7 +45,7 @@ If you have any problems with the plugin or have any questions about its functio
 
 ```
 - What version of Windows do you have?
-- 32 or 64 bits architecture?
+- 32-bit, 64-bit or ARM64 architecture?
 - The version of Notepad++ you have
 - The DiscordRPC plugin version
 ```
