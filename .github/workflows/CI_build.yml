@@ -16,6 +16,8 @@ jobs:
             vcpkg_triplet: x64-windows
           - build_platform: Win32
             vcpkg_triplet: x86-windows
+          - build_platform: ARM64
+            vcpkg_triplet: arm64-windows
 
     steps:
     - name: Checkout repo
@@ -70,3 +72,17 @@ jobs:
       with:
           name: DiscordRPC_Debug_x86
           path: vstudio\bin\debug\DiscordRPC.dll
+
+    - name: Archive artifacts for ARM64
+      if: matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Release'
+      uses: actions/upload-artifact@v6
+      with:
+          name: DiscordRPC_ARM64
+          path: vstudio\bin64\arm64\DiscordRPC.dll
+
+    - name: Archive artifacts for Debug ARM64
+      if: matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Debug'
+      uses: actions/upload-artifact@v6
+      with:
+          name: DiscordRPC_Debug_ARM64
+          path: vstudio\bin64\arm64\debug\DiscordRPC.dll
