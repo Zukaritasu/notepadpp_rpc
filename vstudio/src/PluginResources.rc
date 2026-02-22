@@ -83,8 +83,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,1,679,1
- PRODUCTVERSION 2,1,679,1
+ FILEVERSION 2,1,711,1
+ PRODUCTVERSION 2,1,711,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -101,12 +101,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Zukaritasu"
             VALUE "FileDescription", "Discord Rich Presence"
-            VALUE "FileVersion", "2.1.679.1"
+            VALUE "FileVersion", "2.1.711.1"
             VALUE "InternalName", "DiscordRPC.dll"
-            VALUE "LegalCopyright", "Copyright (c) 2023 Zukaritasu"
+            VALUE "LegalCopyright", "Copyright (c) 2023 - 2026 Zukaritasu"
             VALUE "OriginalFilename", "DiscordRPC.dll"
             VALUE "ProductName", "DiscordRPC"
-            VALUE "ProductVersion", "2.1.679.1"
+            VALUE "ProductVersion", "2.1.711.1"
         END
     END
     BLOCK "VarFileInfo"
