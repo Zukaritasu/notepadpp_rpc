@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Zukaritasu
+// Copyright (C) 2025 - 2026 Zukaritasu
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -85,7 +85,6 @@ private:
 
     std::string presenceToJson(const Presence &presence);
     std::string generateNonce() const;
-    std::string escapeJsonString(const std::string &str) const;
 
 public:
     /**

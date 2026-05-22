@@ -20,6 +20,13 @@
 #include <random>
 #include "nlohmann/json.hpp"
 
+enum DiscordOpcode
+{
+    OP_HANDSHAKE = 0,
+    OP_FRAME = 1,
+    OP_CLOSE = 2
+};
+
 using json = nlohmann::json;
 
 DiscordRichPresence::DiscordRichPresence() noexcept
@@ -96,53 +103,6 @@ std::string DiscordRichPresence::generateNonce() const
     return std::to_string(dis(gen));
 }
 
-std::string DiscordRichPresence::escapeJsonString(const std::string &str) const
-{
-    std::string escaped;
-    escaped.reserve(str.size() + 10); // Reserve extra space for escape characters
-
-    for (unsigned char c : str)
-    {
-        switch (c)
-        {
-        case '"':
-            escaped += "\\\"";
-            break;
-        case '\\':
-            escaped += "\\\\";
-            break;
-        case '\b':
-            escaped += "\\b";
-            break;
-        case '\f':
-            escaped += "\\f";
-            break;
-        case '\n':
-            escaped += "\\n";
-            break;
-        case '\r':
-            escaped += "\\r";
-            break;
-        case '\t':
-            escaped += "\\t";
-            break;
-        default:
-            if (c < 32)
-            {
-                char buf[7];
-                snprintf(buf, sizeof(buf), "\\u%04x", c);
-                escaped += buf;
-            }
-            else
-            {
-                escaped += (char)c;
-            }
-            break;
-        }
-    }
-    return escaped;
-}
-
 bool DiscordRichPresence::connectToDiscord(__int64 clientId, ErrorCallback exc)
 {
     if (m_pipe != INVALID_HANDLE_VALUE)
@@ -161,7 +121,7 @@ bool DiscordRichPresence::connectToDiscord(__int64 clientId, ErrorCallback exc)
             if (m_pipe != INVALID_HANDLE_VALUE)
             {
                 std::string handshake = R"({"v":1,"client_id":")" + std::to_string(clientId) + R"("})";
-                if (sendDiscordMessageSync(0, handshake, exc))
+                if (sendDiscordMessageSync(OP_HANDSHAKE, handshake, exc))
                     return true;
                 ::CloseHandle(m_pipe);
                 m_pipe = INVALID_HANDLE_VALUE;
@@ -278,7 +238,7 @@ bool DiscordRichPresence::UpdatePresence(const Presence &presence, ErrorCallback
     }
 
     m_lastJsonSent = presenceToJson(presence);
-    return sendDiscordMessageSync(1, m_lastJsonSent, exc);
+    return sendDiscordMessageSync(OP_FRAME, m_lastJsonSent, exc);
 }
 
 bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::string &json, ErrorCallback exc)
@@ -288,7 +248,14 @@ bool DiscordRichPresence::sendDiscordMessageSync(uint32_t opcode, const std::str
     };
 
     if (!writeWithTimeout(m_pipe, &header, sizeof(header), PIPE_WRITE_TIMEOUT_MS))
-        return false;
+    {
+        // If we're trying to close, ignore write failures (e.g. if Discord already closed the pipe)
+        return opcode == OP_CLOSE; 
+    }
+
+    if (opcode == OP_CLOSE)
+        return true; // No need to wait for a response when closing
+
     if (!writeWithTimeout(m_pipe, json.c_str(), static_cast<DWORD>(json.size()), PIPE_WRITE_TIMEOUT_MS))
         return false;
 
@@ -345,7 +312,7 @@ void DiscordRichPresence::Update(ErrorCallback exc) noexcept
     if (!m_connected || m_pipe == INVALID_HANDLE_VALUE || m_lastJsonSent.empty())
         return;
 
-    if (!sendDiscordMessageSync(1, m_lastJsonSent, exc))
+    if (!sendDiscordMessageSync(OP_FRAME, m_lastJsonSent, exc))
     {
         m_connected = false;
         return;
@@ -367,7 +334,7 @@ void DiscordRichPresence::Close(ErrorCallback exc) noexcept
     {
         std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId())
             + R"(,"activity":null},"nonce":")" + generateNonce() + R"("})";
-        sendDiscordMessageSync(1, clearActivity, exc);
+        sendDiscordMessageSync(OP_CLOSE, clearActivity, exc);
         disconnect();
     }
 }
@@ -403,7 +370,7 @@ bool DiscordRichPresence::SetIdleStatus(const Presence *presence, ErrorCallback 
 
     // If no presence is provided, use the last known presence
     m_lastJsonSent = presenceToJson(!presence ? m_presence : *presence);
-    return sendDiscordMessageSync(1, m_lastJsonSent, exc);
+    return sendDiscordMessageSync(OP_FRAME, m_lastJsonSent, exc);
 }
 
 void DiscordRichPresence::disconnect()
