@@ -332,9 +332,7 @@ void DiscordRichPresence::Close(ErrorCallback exc) noexcept
     AutoUnlock lock(m_mutex);
     if (m_connected && m_pipe != INVALID_HANDLE_VALUE)
     {
-        std::string clearActivity = R"({"cmd":"SET_ACTIVITY","args":{"pid":)" + std::to_string(::GetCurrentProcessId())
-            + R"(,"activity":null},"nonce":")" + generateNonce() + R"("})";
-        sendDiscordMessageSync(OP_CLOSE, clearActivity, exc);
+        sendDiscordMessageSync(OP_CLOSE, "{}", exc);
         disconnect();
     }
 }
