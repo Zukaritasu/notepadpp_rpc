@@ -25,7 +25,7 @@ jobs:
       uses: actions/checkout@v5
 
     - name: Setup vcpkg Tool
-      uses: lukka/run-vcpkg@v11.5
+      uses: lukka/run-vcpkg@v11.6
       with:
         vcpkgGitCommitId: 'f5cbc726b123896eef77f5acc1b9047a28a0731e' 
         vcpkgDirectory: ${{ github.workspace }}/vcpkg-root
